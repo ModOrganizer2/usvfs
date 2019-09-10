@@ -859,7 +859,7 @@ NTSTATUS WINAPI usvfs::hook_NtQueryDirectoryFile(
   IoStatusBlock->Information = dataRead;
 
   size_t numVirtualFiles = infoIter->second.virtualMatches.size();
-  if ((numVirtualFiles > 0)) {
+  if (true) {
     LOG_CALL()
         .addParam("path", ntdllHandleTracker.lookup(FileHandle))
         .PARAM(FileInformationClass)
@@ -1030,7 +1030,7 @@ NTSTATUS WINAPI usvfs::hook_NtQueryDirectoryFileEx(
   IoStatusBlock->Information = dataRead;
 
   size_t numVirtualFiles = infoIter->second.virtualMatches.size();
-  if ((numVirtualFiles > 0)) {
+  if (true) {
     LOG_CALL()
       .addParam("path", ntdllHandleTracker.lookup(FileHandle))
       .PARAM(FileInformationClass)
