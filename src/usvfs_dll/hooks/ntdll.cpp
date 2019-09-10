@@ -785,6 +785,7 @@ NTSTATUS WINAPI usvfs::hook_NtQueryDirectoryFile(
     } else {
       searchPath = ntdllHandleTracker.lookup(FileHandle);
     }
+    LOG_CALL().PARAM(searchPath);
     gatherVirtualEntries(searchPath, context->redirectionTable(), FileName,
                          infoIter->second);
   }
@@ -952,6 +953,7 @@ NTSTATUS WINAPI usvfs::hook_NtQueryDirectoryFileEx(
     else {
       searchPath = ntdllHandleTracker.lookup(FileHandle);
     }
+    LOG_CALL().PARAM(searchPath);
     gatherVirtualEntries(searchPath, context->redirectionTable(), FileName,
       infoIter->second);
   }
