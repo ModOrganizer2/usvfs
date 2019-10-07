@@ -4,8 +4,9 @@
     <Import Project="external_dependencies_local.props" Condition="Exists('external_dependencies_local.props')"/>
   </ImportGroup>
   <PropertyGroup Label="UserMacros">
-    <BOOST_PATH Condition="'$(BOOST_PATH)'==''">..\..\boost_1_71_0</BOOST_PATH>
-    <BOOST_PATH Condition="'$(BOOST_PATH)'!=''">$(BOOST_PATH)</BOOST_PATH>
+    <!--<BOOST_PATH Condition="'$(BOOST_PATH)'==''">..\..\boost_1_71_0</BOOST_PATH>-->
+    <!--<BOOST_PATH Condition="'$(BOOST_PATH)'!=''">$(BOOST_PATH)</BOOST_PATH>-->
+    <BOOST_PATH>..\..\boost_1_71_0</BOOST_PATH>
     <GTEST_PATH Condition="'$(GTEST_PATH)'==''">..\..\googletest</GTEST_PATH>
   </PropertyGroup>
   <PropertyGroup />
