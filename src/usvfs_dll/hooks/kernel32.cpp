@@ -675,21 +675,11 @@ BOOL WINAPI usvfs::hook_MoveFileExA(LPCSTR lpExistingFileName,
   HOOK_END
   HOOK_START
 
-  const std::wstring existingFileName = ush::string_cast<std::wstring>(lpExistingFileName);
-
-  // careful: lpNewFileName can be null if dwFlags is
-  // MOVEFILE_DELAY_UNTIL_REBOOT, so don't blindly cast the string and make sure
-  // the null pointer is forwarded correctly
-  std::wstring newFileNameWstring;
-  const wchar_t* newFileName = nullptr;
-
-  if (lpNewFileName) {
-    newFileNameWstring = ush::string_cast<std::wstring>(lpNewFileName);
-    newFileName = newFileNameWstring.c_str();
-  }
+  const auto& existingFileName = ush::string_cast<std::wstring>(lpExistingFileName);
+  const auto& newFileName = ush::string_cast<std::wstring>(lpNewFileName);
 
   PRE_REALCALL
-    res = MoveFileExW(existingFileName.c_str(), newFileName, dwFlags);
+    res = MoveFileExW(existingFileName.c_str(), newFileName.c_str(), dwFlags);
   POST_REALCALL
 
   HOOK_END
@@ -802,20 +792,10 @@ BOOL WINAPI usvfs::hook_MoveFileWithProgressA(LPCSTR lpExistingFileName, LPCSTR 
   HOOK_START
 
   const auto& existingFileName = ush::string_cast<std::wstring>(lpExistingFileName);
-
-  // careful: lpNewFileName can be null if dwFlags is
-  // MOVEFILE_DELAY_UNTIL_REBOOT, so don't blindly cast the string and make sure
-  // the null pointer is forwarded correctly
-  std::wstring newFileNameWstring;
-  const wchar_t* newFileName = nullptr;
-
-  if (lpNewFileName) {
-    newFileNameWstring = ush::string_cast<std::wstring>(lpNewFileName);
-    newFileName = newFileNameWstring.c_str();
-  }
+  const auto& newFileName = ush::string_cast<std::wstring>(lpNewFileName);
 
   PRE_REALCALL
-    res = MoveFileWithProgressW(existingFileName.c_str(), newFileName, lpProgressRoutine, lpData, dwFlags);
+    res = MoveFileWithProgressW(existingFileName.c_str(), newFileName.c_str(), lpProgressRoutine, lpData, dwFlags);
   POST_REALCALL
 
   HOOK_END
