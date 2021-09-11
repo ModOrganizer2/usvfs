@@ -6,7 +6,7 @@ platform:
 - x86
 environment:
   GTEST_PATH: C:\Libraries\googletest
-  BOOST_PATH: C:\Libraries\boost_1_75_0
+  BOOST_PATH: C:\Libraries\boost_1_77_0
   WEBHOOK_URL:
     secure: gOKbXaZM9ImtMD5XrYITvdyZUW/az082G9OIN1EC1VZ2CuYaUUM6WY2eiNxaFeOL7/9Jyu/m+Vm1fH54CEyigcUUaxA7d8F5IMWlOgE/7YYdaAFSMUTFD7EK+++3FBYfmU1F/nZ61wsiWE6hB9Au5FpGBSCeQ0Tf8U8m0ybPmD0=
 before_build:
