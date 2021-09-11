@@ -46,7 +46,6 @@ struct USVFSParameters {
   char crashDumpsPath[260];
 };
 
-
 struct usvfsParameters;
 
 DLLEXPORT usvfsParameters* usvfsCreateParameters();
