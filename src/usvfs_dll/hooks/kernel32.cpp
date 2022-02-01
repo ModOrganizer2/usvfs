@@ -420,10 +420,11 @@ DWORD WINAPI usvfs::hook_GetFileAttributesW(LPCWSTR lpFileName)
 
   RerouteW reroute = RerouteW::create(READ_CONTEXT(), callContext, canonicalFile.c_str());
 
-  if (reroute.wasRerouted())
+  if (reroute.wasRerouted()) {
   PRE_REALCALL
   res = ::GetFileAttributesW(reroute.fileName());
   POST_REALCALL
+  }
 
   DWORD originalError = callContext.lastError();
   DWORD fixedError = originalError;
