@@ -762,23 +762,15 @@ BOOL WINAPI VirtualLinkDirectoryStatic(LPCWSTR source, LPCWSTR destination, unsi
       for (winapi::ex::wide::FileResult file :
            winapi::ex::wide::quickFindFiles(sourceP.c_str(), L"*")) {
         if (file.attributes & FILE_ATTRIBUTE_DIRECTORY) {
-          if ((file.fileName != L".") && (file.fileName != L"..")) {
-
-            if (context->directoryShouldBeSkipped(file.fileName)) {
-              continue;
-            }
+          if ((file.fileName != L".") && (file.fileName != L"..") && !context->directoryShouldBeSkipped(file.fileName)) {
 
             VirtualLinkDirectoryStatic((sourceW + file.fileName).c_str(),
                                        (destinationW + file.fileName).c_str(),
                                        flags);
           }
-        } else {
+        } else if (!context->fileShouldBeSkipped(file.fileName)) {
           std::string nameU8 = ush::string_cast<std::string>(
               file.fileName.c_str(), ush::CodePage::UTF8);
-
-          if (context->fileShouldBeSkipped(file.fileName)) {
-            continue;
-          }
 
           // TODO could save memory here by storing only the file name for the
           // source and constructing the full name using the parent directory
@@ -887,25 +879,25 @@ VOID WINAPI ClearExecutableBlacklist()
 }
 
 
-VOID WINAPI AddSkipFileSuffix(LPWSTR fileSuffix)
+VOID WINAPI usvfsAddSkipFileSuffix(LPWSTR fileSuffix)
 {
   context->addSkipFileSuffix(fileSuffix);
 }
 
 
-VOID WINAPI ClearSkipFileSuffixes()
+VOID WINAPI usvfsClearSkipFileSuffixes()
 {
   context->clearSkipFileSuffixes();
 }
 
 
-VOID WINAPI AddSkipDirectory(LPWSTR directory)
+VOID WINAPI usvfsAddSkipDirectory(LPWSTR directory)
 {
   context->addSkipDirectory(directory);
 }
 
 
-VOID WINAPI ClearSkipDirectories()
+VOID WINAPI usvfsClearSkipDirectories()
 {
   context->clearSkipDirectories();
 }

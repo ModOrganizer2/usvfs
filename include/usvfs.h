@@ -160,23 +160,27 @@ DLLEXPORT VOID WINAPI ClearExecutableBlacklist();
  * not to be confused with file extensions
  * @param fileSuffix  a valid file suffix
  */
-DLLEXPORT VOID WINAPI AddSkipFileSuffix(LPWSTR fileSuffix);
+DLLEXPORT VOID WINAPI usvfsAddSkipFileSuffix(LPWSTR fileSuffix);
 
 /**
  * clears the file suffix skip-list
  */
-DLLEXPORT VOID WINAPI ClearSkipFileSuffixes();
+DLLEXPORT VOID WINAPI usvfsClearSkipFileSuffixes();
 
 /**
- * adds a directory to be skipped during linking
- * @param directory  full name of the directory
+ * adds a directory name that will be skipped during directory linking
+ * not a path. Any directory matching the name will be skipped,
+ * regardless of it's path, for example if .git is added,
+ * any sub-path or root-path containing a .git directory
+ * will be skipped during directory linking
+ * @param directory  name of the directory
  */
-DLLEXPORT VOID WINAPI AddSkipDirectory(LPWSTR directory);
+DLLEXPORT VOID WINAPI usvfsAddSkipDirectory(LPWSTR directory);
 
 /**
  * clears the directory skip-list
  */
-DLLEXPORT VOID WINAPI ClearSkipDirectories();
+DLLEXPORT VOID WINAPI usvfsClearSkipDirectories();
 
 /**
  * adds a library to be force loaded when the given process is injected
