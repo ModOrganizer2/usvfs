@@ -168,11 +168,11 @@ DLLEXPORT VOID WINAPI usvfsAddSkipFileSuffix(LPWSTR fileSuffix);
 DLLEXPORT VOID WINAPI usvfsClearSkipFileSuffixes();
 
 /**
- * adds a directory name that will be skipped during directory linking
- * not a path. Any directory matching the name will be skipped,
+ * adds a directory name that will be skipped during directory linking.
+ * Not a path. Any directory matching the name will be skipped,
  * regardless of it's path, for example if .git is added,
  * any sub-path or root-path containing a .git directory
- * will be skipped during directory linking
+ * will have the .git directory skipped during directory linking
  * @param directory  name of the directory
  */
 DLLEXPORT VOID WINAPI usvfsAddSkipDirectory(LPWSTR directory);
