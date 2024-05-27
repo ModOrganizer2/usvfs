@@ -155,6 +155,30 @@ DLLEXPORT VOID WINAPI BlacklistExecutable(LPWSTR executableName);
 DLLEXPORT VOID WINAPI ClearExecutableBlacklist();
 
 /**
+ * adds a file suffix to a list to skip during file linking
+ * .txt and some_file.txt are both valid file suffixes,
+ * not to be confused with file extensions
+ * @param fileSuffix  a valid file suffix
+ */
+DLLEXPORT VOID WINAPI AddSkipFileSuffix(LPWSTR fileSuffix);
+
+/**
+ * clears the file suffix skip-list
+ */
+DLLEXPORT VOID WINAPI ClearSkipFileSuffixes();
+
+/**
+ * adds a directory to be skipped during linking
+ * @param directory  full name of the directory
+ */
+DLLEXPORT VOID WINAPI AddSkipDirectory(LPWSTR directory);
+
+/**
+ * clears the directory skip-list
+ */
+DLLEXPORT VOID WINAPI ClearSkipDirectories();
+
+/**
  * adds a library to be force loaded when the given process is injected
  * @param
  */

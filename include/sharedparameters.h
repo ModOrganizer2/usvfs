@@ -57,6 +57,14 @@ public:
   void clearExecutableBlacklist();
   bool executableBlacklisted(const std::string& app, const std::string& cmd) const;
 
+  void addSkipFileSuffix(const std::string& fileSuffix);
+  void clearSkipFileSuffixes();
+  bool fileShouldBeSkipped(const std::string& file) const;
+
+  void addSkipDirectory(const std::string& directory);
+  void clearSkipDirectories();
+  bool directoryShouldBeSkipped(const std::string& directory) const;
+
   void addForcedLibrary(const std::string& process, const std::string& path);
   std::vector<std::string> forcedLibraries(const std::string& processName);
   void clearForcedLibraries();
@@ -77,6 +85,12 @@ private:
   using ProcessList = boost::container::flat_set<
     DWORD, std::less<DWORD>, DWORDAllocatorT>;
 
+  using FileSuffixSkipList = boost::container::flat_set<
+      shared::StringT, std::less<shared::StringT>, StringAllocatorT>;
+
+  using DirectorySkipList = boost::container::flat_set<
+      shared::StringT, std::less<shared::StringT>, StringAllocatorT>;
+
   using ForcedLibraries = boost::container::slist<
     ForcedLibrary, ForcedLibraryAllocatorT>;
 
@@ -93,6 +107,8 @@ private:
   uint32_t m_userCount;
   ProcessBlacklist m_processBlacklist;
   ProcessList m_processList;
+  FileSuffixSkipList m_fileSuffixSkipList;
+  DirectorySkipList m_directorySkipList;
   ForcedLibraries m_forcedLibraries;
 };
 

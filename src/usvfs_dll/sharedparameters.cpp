@@ -37,6 +37,8 @@ SharedParameters::SharedParameters(const usvfsParameters& reference,
   , m_userCount(1)
   , m_processBlacklist(allocator)
   , m_processList(allocator)
+  , m_fileSuffixSkipList(allocator)
+  , m_directorySkipList(allocator)
   , m_forcedLibraries(allocator)
 {
 }
@@ -192,6 +194,82 @@ bool SharedParameters::executableBlacklisted(
 
   if (blacklisted) {
     spdlog::get("usvfs")->info(log);
+    return true;
+  }
+
+  return false;
+}
+
+void SharedParameters::addSkipFileSuffix(const std::string& fileSuffix)
+{
+  bi::scoped_lock lock(m_mutex);
+
+  m_fileSuffixSkipList.insert(shared::StringT(fileSuffix.begin(), fileSuffix.end(),
+                                              m_fileSuffixSkipList.get_allocator()));
+}
+
+void SharedParameters::clearSkipFileSuffixes()
+{
+  bi::scoped_lock lock(m_mutex);
+  m_fileSuffixSkipList.clear();
+}
+
+bool SharedParameters::fileShouldBeSkipped(const std::string& file) const
+{
+  bool skipFile = false;
+  std::string log;
+
+  {
+    bi::scoped_lock lock(m_mutex);
+
+    for (const shared::StringT& skipFileSuffix : m_fileSuffixSkipList) {
+      if (boost::algorithm::iends_with(file, skipFileSuffix)) {
+        skipFile = true;
+        break;
+      }
+    }
+  }
+
+  if (skipFile) {
+    spdlog::get("usvfs")->debug("skipping file '{}'", file);
+    return true;
+  }
+
+  return false;
+}
+
+void SharedParameters::addSkipDirectory(const std::string& directory) 
+{
+  bi::scoped_lock lock(m_mutex);
+
+  m_directorySkipList.insert(shared::StringT(directory.begin(), directory.end(),
+                                              m_directorySkipList.get_allocator()));
+}
+
+void SharedParameters::clearSkipDirectories() 
+{
+  bi::scoped_lock lock(m_mutex);
+  m_directorySkipList.clear();
+}
+
+bool SharedParameters::directoryShouldBeSkipped(const std::string& directory) const
+{
+  bool skip = false;
+  std::string log;
+
+  {
+    bi::scoped_lock lock(m_mutex);
+
+    for (const shared::StringT& skipDir : m_directorySkipList) {
+      if (boost::algorithm::equals(directory, skipDir)) {
+        skip = true;
+        break;
+      }
+    }
+  }
+
+  if (skip) {
+    spdlog::get("usvfs")->debug("skipping directory '{}'", directory);
     return true;
   }
 

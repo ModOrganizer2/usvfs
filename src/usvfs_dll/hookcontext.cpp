@@ -216,6 +216,56 @@ BOOL HookContext::executableBlacklisted(LPCWSTR wapp, LPCWSTR wcmd) const
   return m_Parameters->executableBlacklisted(app, cmd);
 }
 
+void usvfs::HookContext::addSkipFileSuffix(const std::wstring& fileSuffix) 
+{
+  const auto fsuffix = shared::string_cast<std::string>(fileSuffix, shared::CodePage::UTF8);
+
+  if (fsuffix.empty()) {
+    return;
+  }
+
+  spdlog::get("usvfs")->debug("skipping files with the suffix '{}'", fsuffix);
+  m_Parameters->addSkipFileSuffix(fsuffix);
+}
+
+void usvfs::HookContext::clearSkipFileSuffixes() 
+{
+  spdlog::get("usvfs")->debug("clearing skip file suffixes");
+  m_Parameters->clearSkipFileSuffixes();
+}
+
+BOOL usvfs::HookContext::fileShouldBeSkipped(const std::wstring& wFilename) const
+{
+  const std::string filename = ush::string_cast<std::string>(wFilename, ush::CodePage::UTF8);
+
+  return m_Parameters->fileShouldBeSkipped(filename);
+}
+
+void usvfs::HookContext::addSkipDirectory(const std::wstring& directory) 
+{
+  const auto dir = shared::string_cast<std::string>(directory, shared::CodePage::UTF8);
+
+  if (dir.empty()) {
+    return;
+  }
+
+  spdlog::get("usvfs")->debug("skipping directories named '{}'", dir);
+  m_Parameters->addSkipDirectory(dir);
+}
+
+void usvfs::HookContext::clearSkipDirectories() 
+{
+  spdlog::get("usvfs")->debug("clearing skip directories");
+  m_Parameters->clearSkipDirectories();
+}
+
+BOOL usvfs::HookContext::directoryShouldBeSkipped(const std::wstring& wDirectory) const
+{
+  const std::string directory = ush::string_cast<std::string>(wDirectory, ush::CodePage::UTF8);
+
+  return m_Parameters->directoryShouldBeSkipped(directory);
+}
+
 void HookContext::forceLoadLibrary(
   const std::wstring& wprocess, const std::wstring& wpath)
 {
