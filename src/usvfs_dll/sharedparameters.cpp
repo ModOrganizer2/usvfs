@@ -220,7 +220,7 @@ bool SharedParameters::fileShouldBeSkipped(const std::string& file) const
 
   for (const auto& skipFileSuffix : m_fileSuffixSkipList) {
     if (boost::algorithm::iends_with(file, skipFileSuffix)) {
-      spdlog::get("usvfs")->debug("skipping file '{}'", file);
+      spdlog::get("usvfs")->debug("file '{}' should be skipped, matches file suffix '{}'", file, skipFileSuffix);
       return true;
     }
   }
@@ -248,7 +248,7 @@ bool SharedParameters::directoryShouldBeSkipped(const std::string& directory) co
 
   for (const auto& skipDir : m_directorySkipList) {
     if (boost::algorithm::equals(directory, skipDir)) {
-      spdlog::get("usvfs")->debug("skipping directory '{}'", directory);
+      spdlog::get("usvfs")->debug("directory '{}' should be skipped", directory);
       return true;
     }
   }
