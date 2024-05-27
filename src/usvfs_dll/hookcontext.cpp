@@ -224,7 +224,7 @@ void usvfs::HookContext::addSkipFileSuffix(const std::wstring& fileSuffix)
     return;
   }
 
-  spdlog::get("usvfs")->debug("skipping files with the suffix '{}'", fsuffix);
+  spdlog::get("usvfs")->debug("added skip file suffix '{}'", fsuffix);
   m_Parameters->addSkipFileSuffix(fsuffix);
 }
 
@@ -249,7 +249,7 @@ void usvfs::HookContext::addSkipDirectory(const std::wstring& directory)
     return;
   }
 
-  spdlog::get("usvfs")->debug("skipping directories named '{}'", dir);
+  spdlog::get("usvfs")->debug("added skip directory '{}'", dir);
   m_Parameters->addSkipDirectory(dir);
 }
 
