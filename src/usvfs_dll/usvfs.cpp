@@ -807,7 +807,7 @@ BOOL WINAPI VirtualLinkDirectoryStatic(LPCWSTR source, LPCWSTR destination, unsi
             if (fileNameInSkipDirectories(nameU8, skipDirectories)) {
               // Fail if we desire to fail when a dir/file is skipped
               if (flags & LINKFLAG_FAILIFSKIPPED) {
-                spdlog::get("usvfs")->debug("directory skipped, failing as defined by link flags");
+                spdlog::get("usvfs")->debug("directory '{}' skipped, failing as defined by link flags", nameU8);
                 return FALSE;
               }
 
@@ -824,7 +824,7 @@ BOOL WINAPI VirtualLinkDirectoryStatic(LPCWSTR source, LPCWSTR destination, unsi
           if (fileNameInSkipSuffixes(nameU8, skipFileSuffixes)) {
             // Fail if we desire to fail when a dir/file is skipped
             if (flags & LINKFLAG_FAILIFSKIPPED) {
-              spdlog::get("usvfs")->debug("file skipped, failing as defined by link flags");
+              spdlog::get("usvfs")->debug("file '{}' skipped, failing as defined by link flags", nameU8);
               return FALSE;
             }
 
