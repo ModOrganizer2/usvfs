@@ -49,6 +49,7 @@ static const unsigned int LINKFLAG_CREATETARGET   = 0x00000004; // if set, file 
                                                                 // If there different create-target have been set for an element and one of its
                                                                 // ancestors, the inner-most create-target is used
 static const unsigned int LINKFLAG_RECURSIVE      = 0x00000008; // if set, directories are linked recursively
+static const unsigned int LINKFLAG_FAILIFSKIPPED  = 0x00000010; // if set, linking fails if the file or directory is skipped
 
 
 extern "C" {

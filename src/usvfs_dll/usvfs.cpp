@@ -672,6 +672,33 @@ bool assertPathExists(usvfs::RedirectionTreeContainer &table, LPCWSTR path)
   return true;
 }
 
+static bool fileNameInSkipSuffixes(const std::string& fileNameUtf8,
+                                   const std::vector<std::string>& skipFileSuffixes)
+{
+  for (const auto& skipFileSuffix : skipFileSuffixes) {
+    if (boost::algorithm::iends_with(fileNameUtf8, skipFileSuffix)) {
+      spdlog::get("usvfs")->debug(
+          "file '{}' should be skipped, matches file suffix '{}'", fileNameUtf8,
+          skipFileSuffix);
+      return true;
+    }
+  }
+  return false;
+}
+
+static bool fileNameInSkipDirectories(const std::string& directoryNameUtf8,
+                                      const std::vector<std::string>& skipDirectories)
+{
+  for (const auto& skipDir : skipDirectories) {
+    if (boost::algorithm::equals(directoryNameUtf8, skipDir)) {
+      spdlog::get("usvfs")->debug("directory '{}' should be skipped",
+                                  directoryNameUtf8);
+      return true;
+    }
+  }
+  return false;
+}
+
 BOOL WINAPI VirtualLinkFile(LPCWSTR source, LPCWSTR destination,
                             unsigned int flags)
 {
@@ -683,8 +710,16 @@ BOOL WINAPI VirtualLinkFile(LPCWSTR source, LPCWSTR destination,
       return FALSE;
     }
 
-    std::string sourceU8
-        = ush::string_cast<std::string>(source, ush::CodePage::UTF8);
+    const auto skipFileSuffixes = context->skipFileSuffixes();
+
+    std::string sourceU8 = ush::string_cast<std::string>(source, ush::CodePage::UTF8);
+
+    // Check if the file should be skipped
+    if (fileNameInSkipSuffixes(sourceU8, skipFileSuffixes)) {
+      // return false when we want to fail when the file is skipped
+      return (flags & LINKFLAG_FAILIFSKIPPED) ? FALSE : TRUE;
+    }
+
     auto res = context->redirectionTable().addFile(
         bfs::path(destination), usvfs::RedirectionDataLocal(sourceU8),
         !(flags & LINKFLAG_FAILIFEXISTS));
@@ -728,7 +763,6 @@ static usvfs::shared::TreeFlags convertRedirectionFlags(unsigned int flags)
   return result;
 }
 
-
 BOOL WINAPI VirtualLinkDirectoryStatic(LPCWSTR source, LPCWSTR destination, unsigned int flags)
 {
   // TODO change notification not yet implemented
@@ -752,6 +786,9 @@ BOOL WINAPI VirtualLinkDirectoryStatic(LPCWSTR source, LPCWSTR destination, unsi
           usvfs::shared::FLAG_DIRECTORY | convertRedirectionFlags(flags),
           (flags & LINKFLAG_CREATETARGET) != 0);
 
+    const auto skipDirectories  = context->skipDirectories();
+    const auto skipFileSuffixes = context->skipFileSuffixes();
+
     if ((flags & LINKFLAG_RECURSIVE) != 0) {
       std::wstring sourceP(source);
       std::wstring sourceW      = sourceP + L"\\";
@@ -762,15 +799,37 @@ BOOL WINAPI VirtualLinkDirectoryStatic(LPCWSTR source, LPCWSTR destination, unsi
       for (winapi::ex::wide::FileResult file :
            winapi::ex::wide::quickFindFiles(sourceP.c_str(), L"*")) {
         if (file.attributes & FILE_ATTRIBUTE_DIRECTORY) {
-          if ((file.fileName != L".") && (file.fileName != L"..") && !context->directoryShouldBeSkipped(file.fileName)) {
+          if ((file.fileName != L".") && (file.fileName != L"..")) {
+
+            const auto nameU8 = ush::string_cast<std::string>(file.fileName.c_str(),
+                                                              ush::CodePage::UTF8);
+            // Check if the directory should be skipped
+            if (fileNameInSkipDirectories(nameU8, skipDirectories)) {
+              // Fail if we desire to fail when a dir/file is skipped
+              if (flags & LINKFLAG_FAILIFSKIPPED) {
+                spdlog::get("usvfs")->debug("directory skipped, failing as defined by link flags");
+                return FALSE;
+              }
+
+              continue;
+            }
 
             VirtualLinkDirectoryStatic((sourceW + file.fileName).c_str(),
-                                       (destinationW + file.fileName).c_str(),
-                                       flags);
+                                       (destinationW + file.fileName).c_str(), flags);
           }
-        } else if (!context->fileShouldBeSkipped(file.fileName)) {
-          std::string nameU8 = ush::string_cast<std::string>(
-              file.fileName.c_str(), ush::CodePage::UTF8);
+        } else {
+          const auto nameU8 = ush::string_cast<std::string>(file.fileName.c_str(), ush::CodePage::UTF8);
+
+          // Check if the file should be skipped
+          if (fileNameInSkipSuffixes(nameU8, skipFileSuffixes)) {
+            // Fail if we desire to fail when a dir/file is skipped
+            if (flags & LINKFLAG_FAILIFSKIPPED) {
+              spdlog::get("usvfs")->debug("file skipped, failing as defined by link flags");
+              return FALSE;
+            }
+
+            continue;
+          }
 
           // TODO could save memory here by storing only the file name for the
           // source and constructing the full name using the parent directory

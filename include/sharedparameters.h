@@ -59,11 +59,11 @@ public:
 
   void addSkipFileSuffix(const std::string& fileSuffix);
   void clearSkipFileSuffixes();
-  bool fileShouldBeSkipped(const std::string& file) const;
+  std::vector<std::string> skipFileSuffixes() const;
 
   void addSkipDirectory(const std::string& directory);
   void clearSkipDirectories();
-  bool directoryShouldBeSkipped(const std::string& directory) const;
+  std::vector<std::string> skipDirectories() const;
 
   void addForcedLibrary(const std::string& process, const std::string& path);
   std::vector<std::string> forcedLibraries(const std::string& processName);

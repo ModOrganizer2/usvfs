@@ -146,11 +146,11 @@ public:
 
   void addSkipFileSuffix(const std::wstring& fileSuffix);
   void clearSkipFileSuffixes();
-  BOOL HookContext::fileShouldBeSkipped(const std::wstring& wFilename) const;
+  std::vector<std::string> skipFileSuffixes() const;
 
   void addSkipDirectory(const std::wstring& directory);
   void clearSkipDirectories();
-  BOOL HookContext::directoryShouldBeSkipped(const std::wstring& wDirectory) const;
+  std::vector<std::string> skipDirectories () const;
 
   void forceLoadLibrary(const std::wstring &processName, const std::wstring &libraryPath);
   void clearLibraryForceLoads();

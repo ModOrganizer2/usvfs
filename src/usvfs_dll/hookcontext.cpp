@@ -234,11 +234,9 @@ void usvfs::HookContext::clearSkipFileSuffixes()
   m_Parameters->clearSkipFileSuffixes();
 }
 
-BOOL usvfs::HookContext::fileShouldBeSkipped(const std::wstring& wFilename) const
+std::vector<std::string> usvfs::HookContext::skipFileSuffixes() const
 {
-  const std::string filename = ush::string_cast<std::string>(wFilename, ush::CodePage::UTF8);
-
-  return m_Parameters->fileShouldBeSkipped(filename);
+  return m_Parameters->skipFileSuffixes();
 }
 
 void usvfs::HookContext::addSkipDirectory(const std::wstring& directory) 
@@ -259,11 +257,9 @@ void usvfs::HookContext::clearSkipDirectories()
   m_Parameters->clearSkipDirectories();
 }
 
-BOOL usvfs::HookContext::directoryShouldBeSkipped(const std::wstring& wDirectory) const
+std::vector<std::string> usvfs::HookContext::skipDirectories() const
 {
-  const std::string directory = ush::string_cast<std::string>(wDirectory, ush::CodePage::UTF8);
-
-  return m_Parameters->directoryShouldBeSkipped(directory);
+  return m_Parameters->skipDirectories();
 }
 
 void HookContext::forceLoadLibrary(

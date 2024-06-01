@@ -214,18 +214,10 @@ void SharedParameters::clearSkipFileSuffixes()
   m_fileSuffixSkipList.clear();
 }
 
-bool SharedParameters::fileShouldBeSkipped(const std::string& file) const
+std::vector<std::string> SharedParameters::skipFileSuffixes() const
 {
   bi::scoped_lock lock(m_mutex);
-
-  for (const auto& skipFileSuffix : m_fileSuffixSkipList) {
-    if (boost::algorithm::iends_with(file, skipFileSuffix)) {
-      spdlog::get("usvfs")->debug("file '{}' should be skipped, matches file suffix '{}'", file, skipFileSuffix);
-      return true;
-    }
-  }
-
-  return false;
+  return { m_fileSuffixSkipList.begin(), m_fileSuffixSkipList.end() };
 }
 
 void SharedParameters::addSkipDirectory(const std::string& directory) 
@@ -242,18 +234,10 @@ void SharedParameters::clearSkipDirectories()
   m_directorySkipList.clear();
 }
 
-bool SharedParameters::directoryShouldBeSkipped(const std::string& directory) const
+std::vector<std::string> SharedParameters::skipDirectories() const
 {
   bi::scoped_lock lock(m_mutex);
-
-  for (const auto& skipDir : m_directorySkipList) {
-    if (boost::algorithm::equals(directory, skipDir)) {
-      spdlog::get("usvfs")->debug("directory '{}' should be skipped", directory);
-      return true;
-    }
-  }
-
-  return false;
+  return { m_directorySkipList.begin(), m_directorySkipList.end() };
 }
 
 void SharedParameters::addForcedLibrary(
