@@ -250,6 +250,9 @@
     <ProjectReference Include="asmjit.vcxproj">
       <Project>{5338b9d6-c2a9-4ded-b7e8-31292b96cbf2}</Project>
     </ProjectReference>
+    <ProjectReference Include="fmt.vcxproj">
+      <Project>{e75f344a-1373-4e3f-97ea-bc80ca42e0f0}</Project>
+    </ProjectReference>
     <ProjectReference Include="shared.vcxproj">
       <Project>{2bb3300b-f08a-4063-95c4-8a0fadae6c51}</Project>
     </ProjectReference>
