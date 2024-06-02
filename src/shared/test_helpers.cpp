@@ -53,7 +53,7 @@ namespace test {
 
   path path_of_test_bin(const path& relative) {
     path base(winapi::wide::getModuleFileName(nullptr));
-    return base.parent_path() / relative;
+    return relative.empty() ? base.parent_path() : base.parent_path() / relative;
   }
 
   path path_of_test_temp(const path& relative) {
