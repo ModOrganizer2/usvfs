@@ -8,6 +8,7 @@
 
 # build intermediates:
 /vsbuild/Release
+/vsbuild/ReleaseTest
 /vsbuild/Debug
 
 # test "side effects"

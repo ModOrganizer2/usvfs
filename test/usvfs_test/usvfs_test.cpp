@@ -1,9 +1,13 @@
 
 #include <iostream>
 #include <memory>
+
+#include <boost/filesystem.hpp>
+#include <boost/type_traits.hpp>
 #include <winapi.h>
-#include <stringcast.h>
+
 #include "usvfs_basic_test.h"
+#include <stringcast.h>
 
 void print_usage(const std::wstring& exe_name, const std::wstring& test_name) {
   using namespace std;

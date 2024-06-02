@@ -1,6 +1,6 @@
 #pragma once
 
-#if 0
+#if USVFS_BUILD_TESTS
 
 #include "test_helpers.h"
 #include "winapi.h"

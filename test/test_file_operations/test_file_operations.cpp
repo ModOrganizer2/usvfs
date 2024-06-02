@@ -1,7 +1,11 @@
 #include <cstdio>
 #include <stdexcept>
-#include <winapi.h>
 #include <fmt/format.h>
+
+#include <boost/type_traits.hpp>
+#include <boost/filesystem.hpp>
+#include <winapi.h>
+
 #include <test_helpers.h>
 #include "test_ntapi.h"
 #include "test_w32api.h"

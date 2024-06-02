@@ -1,4 +1,6 @@
 #include <gtest/gtest.h>
+
+#include <boost/filesystem.hpp>
 #include <test_helpers.h>
 #include <windows_sane.h>
 #include <iostream>

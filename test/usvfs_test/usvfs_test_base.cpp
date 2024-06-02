@@ -1,5 +1,7 @@
 
 #include "usvfs_test_base.h"
+#include <boost/filesystem.hpp>
+#include <boost/type_traits.hpp>
 #include <winapi.h>
 #include <stringcast.h>
 #include <usvfs.h>

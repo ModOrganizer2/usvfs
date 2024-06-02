@@ -5,9 +5,13 @@
 #include <utility.h>
 #include <windows_sane.h>
 //#include <boost/thread.hpp>
+#include <boost/filesystem.hpp>
 #include <spdlog.h>
 #include <exceptionex.h>
 #include <winapi.h>
+
+namespace fs = boost::filesystem;
+
 #include <stringutils.h>
 
 
