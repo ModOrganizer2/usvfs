@@ -21,6 +21,7 @@ along with usvfs. If not, see <http://www.gnu.org/licenses/>.
 #pragma once
 
 #include "windows_sane.h"
+#include <ShlObj.h>
 #include "logging.h"
 #include "stringcast.h"
 

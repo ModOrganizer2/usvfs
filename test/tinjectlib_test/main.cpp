@@ -1,9 +1,9 @@
 #include <gtest/gtest.h>
 #include <injectlib.h>
-#include <windows_error.h>
+#include <boost/type_traits.hpp>
+#include <boost/filesystem.hpp>
 #include <winapi.h>
 #include <spdlog.h>
-#include <boost/filesystem.hpp>
 
 using namespace usvfs::shared;
 using namespace InjectLib;

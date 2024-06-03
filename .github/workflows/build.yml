@@ -1,0 +1,57 @@
+name: Build USVFS
+
+on:
+  push:
+    branches: master
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+env:
+  BOOST_PREBUILT_URL: "https://github.com/ModOrganizer2/mob/releases/download/2.5-dependencies/boost_prebuilt_1_85_0.7z"
+
+jobs:
+  build:
+    name: Build USVFS
+    strategy:
+      matrix:
+        arch: [x86, x64]
+        config: [Debug, Release]
+        tests: ["", "Test"]
+        exclude:
+          - config: Debug
+            tests: ""
+    runs-on: windows-2022
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: true
+      - name: Fetch Boost prebuilt
+        run: |
+          Invoke-WebRequest -Uri ${env:BOOST_PREBUILT_URL} -OutFile boost.7z
+          Expand-7ZipArchive -Path boost.7z -Destination .\boost
+      - name: Add msbuild to PATH
+        uses: microsoft/setup-msbuild@v2
+        with:
+          msbuild-architecture: ${{ matrix.arch }}
+      - if: matrix.tests == 'Test'
+        name: Fetch googletest
+        uses: actions/checkout@v4
+        with:
+          repository: google/googletest
+          path: ./googletest
+      - if: matrix.tests == 'Test'
+        name: Build googletest
+        run: |
+          cmake -B googletest/build_${{ matrix.arch }} -A ${{ matrix.arch == 'x86' && 'Win32' || 'x64' }} googletest
+          cmake --build googletest/build_${{ matrix.arch }} --config ${{ matrix.config }}
+      - name: Build
+        run: |
+          msbuild -nologo `
+            -maxCpuCount "-property:UseMultiToolTask=true" "-property:EnforceProcessCountAcrossBuilds=true" `
+            "-property:Configuration=${{ matrix.config }}${{ matrix.tests }}" `
+            "-property:Platform=${{ matrix.arch }}" `
+            "-property:BOOST_PATH=..\boost" `
+            "-property:GTEST_PATH=..\googletest" `
+            "-property:GTEST_LIBDIR=..\googletest\build_${{ matrix.arch }}\lib\${{ matrix.config }}" `
+            "-property:RunCodeAnalysis=false" `
+            .\vsbuild\usvfs.sln

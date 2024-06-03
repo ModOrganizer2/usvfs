@@ -19,6 +19,10 @@ You should have received a copy of the GNU General Public License
 along with usvfs. If not, see <http://www.gnu.org/licenses/>.
 */
 
+// this file depends on so many stuff that the easiest way is to include
+// pch.h from shared
+#include "pch.h"
+
 #include <test_helpers.h>
 
 #pragma warning (push, 3)

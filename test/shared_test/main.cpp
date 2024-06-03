@@ -10,6 +10,8 @@
 #include <directory_tree.h>
 #undef PRIVATE
 
+#include <tree_container.h>
+
 using namespace usvfs::shared;
 
 using namespace boost::interprocess;

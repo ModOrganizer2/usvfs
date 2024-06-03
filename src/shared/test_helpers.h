@@ -1,8 +1,10 @@
 #pragma once
 
-#if 0
+#if USVFS_BUILD_TESTS
 
 #include "windows_sane.h"
+
+#include <filesystem>
 
 namespace test {
 

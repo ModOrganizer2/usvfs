@@ -1,8 +1,8 @@
 #pragma once
 
-#include <test_helpers.h>
-#include <filesystem>
 #include <string>
+
+#include <test_helpers.h>
 
 class usvfs_test_options {
 public:
