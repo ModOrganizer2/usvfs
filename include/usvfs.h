@@ -50,7 +50,9 @@ static const unsigned int LINKFLAG_CREATETARGET   = 0x00000004; // if set, file 
                                                                 // ancestors, the inner-most create-target is used
 static const unsigned int LINKFLAG_RECURSIVE      = 0x00000008; // if set, directories are linked recursively
 static const unsigned int LINKFLAG_FAILIFSKIPPED  = 0x00000010; // if set, linking fails if the file or directory is skipped
-
+                                                                // files or directories are skipped depending on whats been added to 
+                                                                // the skip file suffixes or skip directories list in
+                                                                // the sharedparameters class, those lists are checked during virtual linking
 
 extern "C" {
 
