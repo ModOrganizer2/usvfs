@@ -10,6 +10,7 @@
 /vsbuild/Release
 /vsbuild/ReleaseTest
 /vsbuild/Debug
+/vsbuild/DebugTest
 
 # test "side effects"
 /test/temp

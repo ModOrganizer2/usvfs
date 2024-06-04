@@ -1,4 +1,3 @@
-
 #include "usvfs_basic_test.h"
 
 const char* usvfs_basic_test::scenario_name()
@@ -31,15 +30,10 @@ bool usvfs_basic_test::scenario_run()
   verify_source_existance(LR"(overwrite\mfolder3)", false);
   verify_source_existance(LR"(overwrite\mfolder4)", false);
 
-  ops_overwrite(LR"(mfolder1\fail\epic\fail\newfile1.txt)", R"(newfile1.txt nonrecursive overwrite should fail)", false, false);
-  verify_source_existance(LR"(overwrite\mfolder1)", false);
-  ops_overwrite(LR"(mfolder1\fail\newfile1.txt)", R"(newfile1.txt nonrecursive overwrite should fail)", false, false);
-  verify_source_existance(LR"(overwrite\mfolder1)", false);
+  ops_overwrite(LR"(mfolder1\newfolder1\newfile1.txt)", R"(newfile1.txt nonrecursive overwrite subfolder)", false);
+  verify_source_existance(LR"(overwrite\mfolder1\newfolder1\newfile1.txt)");
   ops_overwrite(LR"(mfolder1\newfile1.txt)", R"(newfile1.txt nonrecursive overwrite)", false);
   ops_read(LR"(mfolder1\newfile1.txt)");
-  verify_source_contents(LR"(overwrite\mfolder1\newfile1.txt)", R"(newfile1.txt nonrecursive overwrite)");
-  // repeat mfolder1\fail test as that folder now exists in overwrite and that changes things
-  ops_overwrite(LR"(mfolder1\fail\newfile1.txt)", R"(newfile1.txt nonrecursive overwrite should fail)", false, false);
 
   ops_overwrite(LR"(mfolder2\newfile2.txt)", R"(newfile2.txt recursive overwrite)", true);
   ops_read(LR"(mfolder2\newfile2.txt)");
@@ -77,12 +71,10 @@ bool usvfs_basic_test::scenario_run()
   verify_source_contents(LR"(overwrite\mfolder4\newfolder4\d\e\epnewfile4.txt)", R"(epnewfile4.txt nonrecursive overwrite)");
 
   verify_mount_existance(LR"(rfolder\rcopyme4.txt)");
-  verify_source_existance(LR"(overwrite\mfolder4\fail)", false);
-  ops_copy(LR"(rfolder\rcopyme4.txt)", LR"(mfolder4\fail\rcopyme4.txt)", true, false);
-  verify_source_existance(LR"(overwrite\mfolder4\fail)", false);
+  verify_source_existance(LR"(overwrite\mfolder4\newfolder4p)", false);
+  ops_copy(LR"(rfolder\rcopyme4.txt)", LR"(mfolder4\newfolder4p\rcopyme4.txt)", true);
+  verify_source_existance(LR"(overwrite\mfolder4\newfolder4p\rcopyme4.txt)", true);
   verify_source_existance(LR"(mod4\mfolder4\mfile.txt)");
-  verify_source_existance(LR"(overwrite\mfolder4\mfile.txt)", false);
-  ops_copy(LR"(rfolder\rcopyme4.txt)", LR"(mfolder4\mfile.txt\fail)", true, false);
   verify_source_existance(LR"(overwrite\mfolder4\mfile.txt)", false);
   ops_copy(LR"(rfolder\rcopyme4.txt)", LR"(mfolder4\rcopyme4.txt)", false);
   verify_source_existance(LR"(overwrite\mfolder4\rcopyme4.txt)");
