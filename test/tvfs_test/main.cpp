@@ -150,7 +150,7 @@ private:
 TEST_F(USVFSTest, CanResizeRedirectiontree)
 {
   using usvfs::shared::MissingThrow;
-  EXPECT_NO_THROW({
+  ASSERT_NO_THROW({
       usvfs::RedirectionTreeContainer container("treetest_shm", 1024);
       for (char i = 'a'; i <= 'z'; ++i) {
         for (char j = 'a'; j <= 'z'; ++j) {
@@ -159,15 +159,15 @@ TEST_F(USVFSTest, CanResizeRedirectiontree)
         }
       }
 
-      EXPECT_EQ("gaga", container->node("C:")->node("temp")->node("aa", MissingThrow)->data().linkTarget);
-      EXPECT_EQ("gaga", container->node("C:")->node("temp")->node("az", MissingThrow)->data().linkTarget);
+      ASSERT_EQ("gaga", container->node("C:")->node("temp")->node("aa", MissingThrow)->data().linkTarget);
+      ASSERT_EQ("gaga", container->node("C:")->node("temp")->node("az", MissingThrow)->data().linkTarget);
   });
 }
 
 /*
 TEST_F(USVFSTest, CreateFileHookReportsCorrectErrorOnMissingFile)
 {
-  EXPECT_NO_THROW({
+  ASSERT_NO_THROW({
     USVFSParameters params;
     USVFSInitParameters(&params, "usvfs_test", true, LogLevel::Debug, CrashDumpsType::None, "");
     std::unique_ptr<usvfs::HookContext> ctx(CreateHookContext(params, ::GetModuleHandle(nullptr)));
@@ -179,8 +179,8 @@ TEST_F(USVFSTest, CreateFileHookReportsCorrectErrorOnMissingFile)
                                      , FILE_ATTRIBUTE_NORMAL
                                      , nullptr);
 
-    EXPECT_EQ(INVALID_HANDLE_VALUE, res);
-    EXPECT_EQ(ERROR_FILE_NOT_FOUND, ::GetLastError());
+    ASSERT_EQ(INVALID_HANDLE_VALUE, res);
+    ASSERT_EQ(ERROR_FILE_NOT_FOUND, ::GetLastError());
   });
 }
 */
@@ -188,7 +188,7 @@ TEST_F(USVFSTest, CreateFileHookReportsCorrectErrorOnMissingFile)
 /*
 TEST_F(USVFSTestWithReroute, CreateFileHookRedirectsFile)
 {
-  EXPECT_NE(INVALID_HANDLE_VALUE
+  ASSERT_NE(INVALID_HANDLE_VALUE
             , usvfs::hook_CreateFileW(VIRTUAL_FILEW
                                   , GENERIC_READ
                                   , FILE_SHARE_READ | FILE_SHARE_WRITE
@@ -202,15 +202,15 @@ TEST_F(USVFSTestWithReroute, CreateFileHookRedirectsFile)
 
 TEST_F(USVFSTest, GetFileAttributesHookReportsCorrectErrorOnMissingFile)
 {
-  EXPECT_NO_THROW({
+  ASSERT_NO_THROW({
     try {
         USVFSParameters params;
         USVFSInitParameters(&params, "usvfs_test", true, LogLevel::Debug, CrashDumpsType::None, "");
         std::unique_ptr<usvfs::HookContext> ctx(CreateHookContext(params, ::GetModuleHandle(nullptr)));
         DWORD res = usvfs::hook_GetFileAttributesW(VIRTUAL_FILEW);
 
-        EXPECT_EQ(INVALID_FILE_ATTRIBUTES, res);
-        EXPECT_EQ(ERROR_FILE_NOT_FOUND, ::GetLastError());
+        ASSERT_EQ(INVALID_FILE_ATTRIBUTES, res);
+        ASSERT_EQ(ERROR_FILE_NOT_FOUND, ::GetLastError());
     } catch (const std::exception& e) {
         logger()->error("Exception: {}", e.what());
         throw;
@@ -228,7 +228,7 @@ TEST_F(USVFSTest, GetFileAttributesHookRedirectsFile)
   tree.addFile(ush::string_cast<std::string>(VIRTUAL_FILEW, ush::CodePage::UTF8).c_str()
                , usvfs::RedirectionDataLocal(REAL_FILEA));
 
-  EXPECT_EQ(::GetFileAttributesW(REAL_FILEW)
+  ASSERT_EQ(::GetFileAttributesW(REAL_FILEW)
             , usvfs::hook_GetFileAttributesW(VIRTUAL_FILEW));
 }
 /*
@@ -246,9 +246,50 @@ TEST_F(USVFSTest, GetFullPathNameOnRegularCurrentDirectory)
 
   DWORD res = usvfs::hook_GetFullPathNameW(L"filename.txt", bufferLength, buffer.get(), &filePart);
 
-  EXPECT_NE(0UL, res);
-  EXPECT_EQ(expected, std::wstring(buffer.get()));
+  ASSERT_NE(0UL, res);
+  ASSERT_EQ(expected, std::wstring(buffer.get()));
 }*/
+
+// small wrapper to call usvfs::hook_NtOpenFile with a path
+//
+// at some point in time, changes were made to USVFS such that calling a hooked
+// function from a handle obtained from a non-hooked function would not work anymore, 
+// meaning that function such as CreateFileW that have no hook equivalent cannot
+// be used to test hook functions
+// 
+// this function is useful to simulate a CreateFileW by internally using the hook
+// version of NtOpenFile
+//
+HANDLE hooked_NtOpenFile(LPWSTR path, ACCESS_MASK accessMask, ULONG shareAccess, ULONG openOptions)
+{
+  constexpr size_t BUFFER_SIZE = 2048;
+  IO_STATUS_BLOCK statusBlock;
+  OBJECT_ATTRIBUTES attributes;
+  attributes.SecurityDescriptor = 0;
+  attributes.SecurityQualityOfService = 0;
+  attributes.RootDirectory = 0;
+  attributes.Attributes = 0;
+  attributes.Length = sizeof(OBJECT_ATTRIBUTES);
+
+  WCHAR stringBuffer[BUFFER_SIZE];
+  UNICODE_STRING  string;
+  string.Buffer = stringBuffer;
+  lstrcpyW(stringBuffer, L"\\??\\");
+  lstrcatW(stringBuffer, path);
+  string.Length = lstrlenW(stringBuffer) * 2; 
+  string.MaximumLength = BUFFER_SIZE;
+  attributes.ObjectName = &string;
+  
+  HANDLE ret = INVALID_HANDLE_VALUE;
+  if (usvfs::hook_NtOpenFile(&ret, accessMask | SYNCHRONIZE, 
+    &attributes, &statusBlock, shareAccess, 
+    openOptions | FILE_SYNCHRONOUS_IO_NONALERT) != STATUS_SUCCESS)
+  {
+    return INVALID_HANDLE_VALUE;
+  }
+
+  return ret;
+}
 
 TEST_F(USVFSTest, NtQueryDirectoryFileRegularFile)
 {
@@ -256,13 +297,13 @@ TEST_F(USVFSTest, NtQueryDirectoryFileRegularFile)
   USVFSInitParameters(&params, "usvfs_test", true, LogLevel::Debug, CrashDumpsType::None, "");
   std::unique_ptr<usvfs::HookContext> ctx(CreateHookContext(params, ::GetModuleHandle(nullptr)));
 
-  HANDLE hdl = CreateFileW(L"C:\\"
-                             , GENERIC_READ
-                             , FILE_SHARE_READ | FILE_SHARE_WRITE
-                             , nullptr
-                             , OPEN_EXISTING
-                             , FILE_ATTRIBUTE_NORMAL | FILE_FLAG_BACKUP_SEMANTICS
-                             , nullptr);
+
+  HANDLE hdl = hooked_NtOpenFile(
+    L"C:\\"
+    , FILE_GENERIC_READ
+    , FILE_SHARE_READ | FILE_SHARE_WRITE
+    , OPEN_EXISTING);
+  ASSERT_NE(INVALID_HANDLE_VALUE, hdl);
 
   IO_STATUS_BLOCK status;
   char buffer[1024];
@@ -279,7 +320,7 @@ TEST_F(USVFSTest, NtQueryDirectoryFileRegularFile)
                                , nullptr
                                , TRUE);
 
-  EXPECT_EQ(STATUS_SUCCESS, status.Status);
+  ASSERT_EQ(STATUS_SUCCESS, status.Status);
 }
 
 TEST_F(USVFSTest, NtQueryDirectoryFileFindsVirtualFile)
@@ -289,15 +330,14 @@ TEST_F(USVFSTest, NtQueryDirectoryFileFindsVirtualFile)
   std::unique_ptr<usvfs::HookContext> ctx(CreateHookContext(params, ::GetModuleHandle(nullptr)));
   usvfs::RedirectionTreeContainer &tree = ctx->redirectionTable();
 
-  tree.addFile("C:\\np.exe", usvfs::RedirectionDataLocal(REAL_FILEA));
+  tree.addFile(L"C:\\np.exe", usvfs::RedirectionDataLocal(REAL_FILEA));
 
-  HANDLE hdl = CreateFileW(L"C:\\"
-                             , GENERIC_READ
-                             , FILE_SHARE_READ | FILE_SHARE_WRITE
-                             , nullptr
-                             , OPEN_EXISTING
-                             , FILE_ATTRIBUTE_NORMAL | FILE_FLAG_BACKUP_SEMANTICS
-                             , nullptr);
+  HANDLE hdl = hooked_NtOpenFile(
+    L"C:\\"
+    , FILE_GENERIC_READ
+    , FILE_SHARE_READ | FILE_SHARE_WRITE
+    , OPEN_EXISTING);
+  ASSERT_NE(INVALID_HANDLE_VALUE, hdl);
 
   IO_STATUS_BLOCK status;
   char buffer[1024];
@@ -317,13 +357,13 @@ TEST_F(USVFSTest, NtQueryDirectoryFileFindsVirtualFile)
                                , TRUE);
 
   FILE_DIRECTORY_INFORMATION *info = reinterpret_cast<FILE_DIRECTORY_INFORMATION*>(buffer);
-  EXPECT_EQ(STATUS_SUCCESS, status.Status);
-  EXPECT_EQ(0, wcscmp(info->FileName, L"np.exe"));
+  ASSERT_EQ(STATUS_SUCCESS, status.Status);
+  ASSERT_EQ(0, wcscmp(info->FileName, L"np.exe"));
 }
 
 TEST_F(USVFSTestAuto, CannotCreateLinkToFileInNonexistantDirectory)
 {
-  EXPECT_EQ(FALSE, VirtualLinkFile(REAL_FILEW, L"c:/this_directory_shouldnt_exist/np.exe", FALSE));
+  ASSERT_EQ(FALSE, VirtualLinkFile(REAL_FILEW, L"c:/this_directory_shouldnt_exist/np.exe", FALSE));
 }
 
 TEST_F(USVFSTestAuto, CanCreateMultipleLinks)
@@ -331,15 +371,15 @@ TEST_F(USVFSTestAuto, CanCreateMultipleLinks)
   static LPCWSTR outFile = LR"(C:\np.exe)";
   static LPCWSTR outDir  = LR"(C:\logs)";
   static LPCWSTR outDirCanonizeTest = LR"(C:\.\not/../logs\.\a\.\b\.\c\..\.\..\.\..\)";
-  EXPECT_EQ(TRUE, VirtualLinkFile(REAL_FILEW, outFile, 0));
-  EXPECT_EQ(TRUE, VirtualLinkDirectoryStatic(REAL_DIRW, outDir, 0));
+  ASSERT_EQ(TRUE, VirtualLinkFile(REAL_FILEW, outFile, 0));
+  ASSERT_EQ(TRUE, VirtualLinkDirectoryStatic(REAL_DIRW, outDir, 0));
 
   // both file and dir exist and have the correct type
-  EXPECT_NE(INVALID_FILE_ATTRIBUTES, usvfs::hook_GetFileAttributesW(outFile));
-  EXPECT_NE(INVALID_FILE_ATTRIBUTES, usvfs::hook_GetFileAttributesW(outDir));
-  EXPECT_EQ(0UL, usvfs::hook_GetFileAttributesW(outFile) & FILE_ATTRIBUTE_DIRECTORY);
-  EXPECT_NE(0UL, usvfs::hook_GetFileAttributesW(outDir)  & FILE_ATTRIBUTE_DIRECTORY);
-  EXPECT_NE(0UL, usvfs::hook_GetFileAttributesW(outDirCanonizeTest) & FILE_ATTRIBUTE_DIRECTORY);
+  ASSERT_NE(INVALID_FILE_ATTRIBUTES, usvfs::hook_GetFileAttributesW(outFile));
+  ASSERT_NE(INVALID_FILE_ATTRIBUTES, usvfs::hook_GetFileAttributesW(outDir));
+  ASSERT_EQ(0UL, usvfs::hook_GetFileAttributesW(outFile) & FILE_ATTRIBUTE_DIRECTORY);
+  ASSERT_NE(0UL, usvfs::hook_GetFileAttributesW(outDir)  & FILE_ATTRIBUTE_DIRECTORY);
+  ASSERT_NE(0UL, usvfs::hook_GetFileAttributesW(outDirCanonizeTest) & FILE_ATTRIBUTE_DIRECTORY);
 }
 
 int main(int argc, char **argv) {

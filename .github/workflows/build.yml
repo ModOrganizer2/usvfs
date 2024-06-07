@@ -55,3 +55,83 @@ jobs:
             "-property:GTEST_LIBDIR=..\googletest\build_${{ matrix.arch }}\lib\${{ matrix.config }}" `
             "-property:RunCodeAnalysis=false" `
             .\vsbuild\usvfs.sln
+
+      - if: matrix.tests == 'Test' && matrix.config == 'Debug'
+        uses: actions/upload-artifact@master
+        with:
+          name: usvfs-libs_${{ matrix.arch }}
+          path: ./lib
+      - if: matrix.tests == 'Test' && matrix.config == 'Debug'
+        uses: actions/upload-artifact@master
+        with:
+          name: usvfs-bins_${{ matrix.arch }}
+          path: ./bin
+      - if: matrix.tests == 'Test' && matrix.config == 'Debug'
+        uses: actions/upload-artifact@master
+        with:
+          name: usvfs-tests_${{ matrix.arch }}
+          path: ./test/bin
+
+  # merge x86 / x64 artifacts
+  merge-artifacts:
+    runs-on: ubuntu-latest
+    name: Merge Artifacts for Tests
+    needs: build
+    steps:
+      - name: Merge USVFS libs
+        uses: actions/upload-artifact/merge@v4
+        with:
+          name: usvfs-libs
+          pattern: usvfs-libs_*
+      - name: Merge USVFS bins
+        uses: actions/upload-artifact/merge@v4
+        with:
+          name: usvfs-bins
+          pattern: usvfs-bins_*
+      - name: Merge USVFS tests
+        uses: actions/upload-artifact/merge@v4
+        with:
+          name: usvfs-tests
+          pattern: usvfs-tests_*
+
+  test:
+    name: Test USVFS
+    needs: merge-artifacts
+    runs-on: windows-2022
+    strategy:
+      matrix:
+        arch: [x86, x64]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@master
+        with:
+          name: usvfs-libs
+          path: ./lib
+      - uses: actions/download-artifact@master
+        with:
+          name: usvfs-bins
+          path: ./bin
+      - uses: actions/download-artifact@master
+        with:
+          name: usvfs-tests
+          path: ./test/bin
+      - run: ./test/bin/shared_test_${{ matrix.arch }}.exe
+        if: always()
+      - run: ./test/bin/testinject_bin_${{ matrix.arch }}.exe
+        if: always()
+      - run: ./test/bin/thooklib_test_${{ matrix.arch }}.exe
+        if: always()
+      - run: ./test/bin/tinjectlib_test_${{ matrix.arch }}.exe
+        if: always()
+      - run: ./test/bin/tvfs_test_${{ matrix.arch }}.exe
+        if: always()
+      - run: ./test/bin/usvfs_test_runner_${{ matrix.arch }}.exe
+        if: always()
+      - uses: actions/upload-artifact@master
+        if: always()
+        with:
+          name: tests-outputs_${{ matrix.arch }}
+          path: ./test/temp
+          if-no-files-found: ignore
+          retention-days: 7
+          overwrite: true
