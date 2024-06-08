@@ -211,6 +211,6 @@ DLLEXPORT void WINAPI usvfsUpdateParameters(usvfsParameters* p);
 
 DLLEXPORT int WINAPI usvfsCreateMiniDump(PEXCEPTION_POINTERS exceptionPtrs, CrashDumpsType type, const wchar_t* dumpPath);
 
-DLLEXPORT const char* WINAPI usvfsUSVFSVersionString();
+DLLEXPORT const char* WINAPI usvfsVersionString();
 
 }

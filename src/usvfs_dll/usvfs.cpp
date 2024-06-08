@@ -964,7 +964,7 @@ VOID WINAPI usvfsPrintDebugInfo()
       ->warn("===== / debug {} =====", context->redirectionTable().shmName());
 }
 
-const char* WINAPI usvfsUSVFSVersionString()
+const char* WINAPI usvfsVersionString()
 {
   return USVFS_VERSION_STRING;
 }
