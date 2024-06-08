@@ -195,11 +195,6 @@ private:
 } // namespace
 
 
-// exposed only to unit tests for easier testability
-extern "C" [[deprecated("deprecated, use usvfsCreateHookContext()")]]
-DLLEXPORT usvfs::HookContext *__cdecl CreateHookContext(
-    const USVFSParameters &params, HMODULE module);
-
 extern "C" DLLEXPORT usvfs::HookContext* WINAPI usvfsCreateHookContext(
   const usvfsParameters& params, HMODULE module);
 

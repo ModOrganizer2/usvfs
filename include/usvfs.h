@@ -59,50 +59,44 @@ extern "C" {
 /**
  * removes all virtual mappings
  */
-DLLEXPORT void WINAPI ClearVirtualMappings();
+DLLEXPORT void WINAPI usvfsClearVirtualMappings();
 
 /**
  * link a file virtually
  * @note: the directory the destination file resides in has to exist - at least virtually.
  */
-DLLEXPORT BOOL WINAPI VirtualLinkFile(LPCWSTR source, LPCWSTR destination, unsigned int flags);
+DLLEXPORT BOOL WINAPI usvfsVirtualLinkFile(LPCWSTR source, LPCWSTR destination, unsigned int flags);
 
 /**
  * link a directory virtually. This static variant recursively links all files individually, change notifications
  * are used to update the information.
  * @param failIfExists if true, this call fails if the destination directory exists (virtually or physically)
  */
-DLLEXPORT BOOL WINAPI VirtualLinkDirectoryStatic(LPCWSTR source, LPCWSTR destination, unsigned int flags);
+DLLEXPORT BOOL WINAPI usvfsVirtualLinkDirectoryStatic(LPCWSTR source, LPCWSTR destination, unsigned int flags);
 
 /**
  * connect to a virtual filesystem as a controller, without hooking the calling process. Please note that
  * you can only be connected to one vfs, so this will silently disconnect from a previous vfs.
  */
-[[deprecated("deprecated, use usvfsConnectVFS()")]]
-DLLEXPORT BOOL WINAPI ConnectVFS(const USVFSParameters *parameters);
-
 DLLEXPORT BOOL WINAPI usvfsConnectVFS(const usvfsParameters* p);
 
 /**
  * @brief create a new VFS. This is similar to ConnectVFS except it guarantees
  *   the vfs is reset before use.
  */
-[[deprecated("deprecated, use usvfsCreateVFS()")]]
-DLLEXPORT BOOL WINAPI CreateVFS(const USVFSParameters *parameters);
-
 DLLEXPORT BOOL WINAPI usvfsCreateVFS(const usvfsParameters* p);
 
 /**
  * disconnect from a virtual filesystem. This removes hooks if necessary
  */
-DLLEXPORT void WINAPI DisconnectVFS();
+DLLEXPORT void WINAPI usvfsDisconnectVFS();
 
-DLLEXPORT void WINAPI GetCurrentVFSName(char *buffer, size_t size);
+DLLEXPORT void WINAPI usvfsGetCurrentVFSName(char *buffer, size_t size);
 
 /**
  * retrieve a list of all processes connected to the vfs
  */
-DLLEXPORT BOOL WINAPI GetVFSProcessList(size_t *count, LPDWORD processIDs);
+DLLEXPORT BOOL WINAPI usvfsGetVFSProcessList(size_t *count, LPDWORD processIDs);
 
 // retrieve a list of all processes connected to the vfs, stores an array
 // of `count` elements in `*buffer`
@@ -116,12 +110,12 @@ DLLEXPORT BOOL WINAPI GetVFSProcessList(size_t *count, LPDWORD processIDs);
 //                                running, probably some internal error
 //   - ERROR_NOT_ENOUGH_MEMORY:   malloc() failed
 //
-DLLEXPORT BOOL WINAPI GetVFSProcessList2(size_t* count, DWORD** buffer);
+DLLEXPORT BOOL WINAPI usvfsGetVFSProcessList2(size_t* count, DWORD** buffer);
 
 /**
  * spawn a new process that can see the virtual file system. The signature is identical to CreateProcess
  */
-DLLEXPORT BOOL WINAPI CreateProcessHooked(
+DLLEXPORT BOOL WINAPI usvfsCreateProcessHooked(
     LPCWSTR lpApplicationName, LPWSTR lpCommandLine,
     LPSECURITY_ATTRIBUTES lpProcessAttributes,
     LPSECURITY_ATTRIBUTES lpThreadAttributes, BOOL bInheritHandles,
@@ -133,7 +127,7 @@ DLLEXPORT BOOL WINAPI CreateProcessHooked(
  * FIXME There is currently no way to unblock from the caller side
  * FIXME retrieves log messages from all instances, the logging queue is not separated
  */
-DLLEXPORT bool WINAPI GetLogMessages(LPSTR buffer, size_t size, bool blocking = false);
+DLLEXPORT bool WINAPI usvfsGetLogMessages(LPSTR buffer, size_t size, bool blocking = false);
 
 /**
  * retrieves a readable representation of the vfs tree
@@ -143,19 +137,19 @@ DLLEXPORT bool WINAPI GetLogMessages(LPSTR buffer, size_t size, bool blocking = 
  *               this value will have been updated to contain the required size,
  *               even if this is bigger than the buffer size
  */
-DLLEXPORT BOOL WINAPI CreateVFSDump(LPSTR buffer, size_t *size);
+DLLEXPORT BOOL WINAPI usvfsCreateVFSDump(LPSTR buffer, size_t *size);
 
 /**
  * adds an executable to the blacklist so it doesn't get exposed to the virtual
  * file system
  * @param executableName  name of the executable
  */
-DLLEXPORT VOID WINAPI BlacklistExecutable(LPWSTR executableName);
+DLLEXPORT VOID WINAPI usvfsBlacklistExecutable(LPWSTR executableName);
 
 /**
  * clears the executable blacklist
  */
-DLLEXPORT VOID WINAPI ClearExecutableBlacklist();
+DLLEXPORT VOID WINAPI usvfsClearExecutableBlacklist();
 
 /**
  * adds a file suffix to a list to skip during file linking
@@ -189,21 +183,21 @@ DLLEXPORT VOID WINAPI usvfsClearSkipDirectories();
  * adds a library to be force loaded when the given process is injected
  * @param
  */
-DLLEXPORT VOID WINAPI ForceLoadLibrary(LPWSTR processName, LPWSTR libraryPath);
+DLLEXPORT VOID WINAPI usvfsForceLoadLibrary(LPWSTR processName, LPWSTR libraryPath);
 
 /**
  * clears all previous calls to ForceLoadLibrary
  */
-DLLEXPORT VOID WINAPI ClearLibraryForceLoads();
+DLLEXPORT VOID WINAPI usvfsClearLibraryForceLoads();
 
 /**
  * print debugging info about the vfs. The format is currently not fixed and may
  * change between usvfs versions
  */
-DLLEXPORT VOID WINAPI PrintDebugInfo();
+DLLEXPORT VOID WINAPI usvfsPrintDebugInfo();
 
 //#if defined(UNITTEST) || defined(_WINDLL)
-DLLEXPORT void WINAPI InitLogging(bool toLocal = false);
+DLLEXPORT void WINAPI usvfsInitLogging(bool toLocal = false);
 //#endif
 
 /**
@@ -211,26 +205,12 @@ DLLEXPORT void WINAPI InitLogging(bool toLocal = false);
  */
 DLLEXPORT void __cdecl InitHooks(LPVOID userData, size_t userDataSize);
 
-[[deprecated("deprecated, use usvfsCreateParameters()")]]
-DLLEXPORT void WINAPI USVFSInitParameters(USVFSParameters *parameters,
-                                          const char *instanceName,
-                                          bool debugMode,
-                                          LogLevel logLevel,
-                                          CrashDumpsType crashDumpsType,
-                                          const char *crashDumpsPath);
-
-/**
-* @brief Used to change parameters which can be changed in runtime
-*/
-[[deprecated("deprecated, use usvfsUpdateParameters()")]]
-DLLEXPORT void WINAPI USVFSUpdateParams(LogLevel level, CrashDumpsType type);
-
 // the instance and shm names are not updated
 //
 DLLEXPORT void WINAPI usvfsUpdateParameters(usvfsParameters* p);
 
-DLLEXPORT int WINAPI CreateMiniDump(PEXCEPTION_POINTERS exceptionPtrs, CrashDumpsType type, const wchar_t* dumpPath);
+DLLEXPORT int WINAPI usvfsCreateMiniDump(PEXCEPTION_POINTERS exceptionPtrs, CrashDumpsType type, const wchar_t* dumpPath);
 
-DLLEXPORT const char* WINAPI USVFSVersionString();
+DLLEXPORT const char* WINAPI usvfsUSVFSVersionString();
 
 }

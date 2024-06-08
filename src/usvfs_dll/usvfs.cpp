@@ -194,13 +194,13 @@ void InitLoggingInternal(bool toConsole, bool connectExistingSHM)
 }
 
 
-void WINAPI InitLogging(bool toConsole)
+void WINAPI usvfsInitLogging(bool toConsole)
 {
   InitLoggingInternal(toConsole, false);
 }
 
-extern "C" DLLEXPORT bool WINAPI GetLogMessages(LPSTR buffer, size_t size,
-                                                bool blocking)
+extern "C" DLLEXPORT bool WINAPI usvfsGetLogMessages(
+  LPSTR buffer, size_t size, bool blocking)
 {
   buffer[0] = '\0';
   try {
@@ -221,19 +221,6 @@ void SetLogLevel(LogLevel level)
 {
   spdlog::get("usvfs")->set_level(ConvertLogLevel(level));
   spdlog::get("hooks")->set_level(ConvertLogLevel(level));
-}
-
-// deprecated
-//
-void WINAPI USVFSUpdateParams(LogLevel level, CrashDumpsType type)
-{
-  auto* p = usvfsCreateParameters();
-
-  usvfsSetLogLevel(p, level);
-  usvfsSetCrashDumpType(p, type);
-
-  usvfsUpdateParameters(p);
-  usvfsFreeParameters(p);
 }
 
 void WINAPI usvfsUpdateParameters(usvfsParameters* p)
@@ -329,7 +316,7 @@ int createMiniDumpImpl(PEXCEPTION_POINTERS exceptionPtrs, CrashDumpsType type, c
     return 6;
 }
 
-int WINAPI CreateMiniDump(PEXCEPTION_POINTERS exceptionPtrs, CrashDumpsType type, const wchar_t* dumpPath)
+int WINAPI usvfsCreateMiniDump(PEXCEPTION_POINTERS exceptionPtrs, CrashDumpsType type, const wchar_t* dumpPath)
 {
   if (type == CrashDumpsType::None)
     return 0;
@@ -394,7 +381,7 @@ LONG WINAPI VEHandler(PEXCEPTION_POINTERS exceptionPtrs)
     trampPool.setBlock(true);
   }
 
-  CreateMiniDump(exceptionPtrs, usvfs_dump_type, usvfs_dump_path.c_str());
+  usvfsCreateMiniDump(exceptionPtrs, usvfs_dump_type, usvfs_dump_path.c_str());
 
   return EXCEPTION_CONTINUE_SEARCH;
 }
@@ -462,21 +449,11 @@ void __cdecl InitHooks(LPVOID parameters, size_t)
 }
 
 
-void WINAPI GetCurrentVFSName(char *buffer, size_t size)
+void WINAPI usvfsGetCurrentVFSName(char *buffer, size_t size)
 {
   ush::strncpy_sz(buffer, context->callParameters().currentSHMName, size);
 }
 
-
-// deprecated
-//
-BOOL WINAPI CreateVFS(const USVFSParameters *oldParams)
-{
-  const usvfsParameters p(*oldParams);
-  const auto r = usvfsCreateVFS(&p);
-
-  return r;
-}
 
 BOOL WINAPI usvfsCreateVFS(const usvfsParameters* p)
 {
@@ -484,16 +461,6 @@ BOOL WINAPI usvfsCreateVFS(const usvfsParameters* p)
   return usvfsConnectVFS(p);
 }
 
-
-// deprecated
-//
-BOOL WINAPI ConnectVFS(const USVFSParameters *oldParams)
-{
-  const usvfsParameters p(*oldParams);
-  const auto r = usvfsConnectVFS(&p);
-
-  return r;
-}
 
 BOOL WINAPI usvfsConnectVFS(const usvfsParameters* params)
 {
@@ -503,7 +470,7 @@ BOOL WINAPI usvfsConnectVFS(const usvfsParameters* params)
   }
 
   try {
-    DisconnectVFS();
+    usvfsDisconnectVFS();
     context = new usvfs::HookContext(*params, dllModule);
 
     return TRUE;
@@ -514,7 +481,7 @@ BOOL WINAPI usvfsConnectVFS(const usvfsParameters* params)
 }
 
 
-void WINAPI DisconnectVFS()
+void WINAPI usvfsDisconnectVFS()
 {
   if (spdlog::get("usvfs").get() == nullptr) {
     // create temporary logger so we don't get null-pointer exceptions
@@ -560,7 +527,7 @@ bool processStillActive(DWORD pid)
 }
 
 
-BOOL WINAPI GetVFSProcessList(size_t *count, LPDWORD processIDs)
+BOOL WINAPI usvfsGetVFSProcessList(size_t *count, LPDWORD processIDs)
 {
   if (count == nullptr) {
     SetLastError(ERROR_INVALID_PARAMETER);
@@ -586,7 +553,7 @@ BOOL WINAPI GetVFSProcessList(size_t *count, LPDWORD processIDs)
   return TRUE;
 }
 
-BOOL WINAPI GetVFSProcessList2(size_t* count, DWORD** buffer)
+BOOL WINAPI usvfsGetVFSProcessList2(size_t* count, DWORD** buffer)
 {
   if (!count || !buffer) {
     SetLastError(ERROR_INVALID_PARAMETER);
@@ -615,7 +582,7 @@ BOOL WINAPI GetVFSProcessList2(size_t* count, DWORD** buffer)
   return TRUE;
 }
 
-void WINAPI ClearVirtualMappings()
+void WINAPI usvfsClearVirtualMappings()
 {
   context->redirectionTable()->clear();
   context->inverseTable()->clear();
@@ -699,7 +666,7 @@ static bool fileNameInSkipDirectories(const std::string& directoryNameUtf8,
   return false;
 }
 
-BOOL WINAPI VirtualLinkFile(LPCWSTR source, LPCWSTR destination,
+BOOL WINAPI usvfsVirtualLinkFile(LPCWSTR source, LPCWSTR destination,
                             unsigned int flags)
 {
   // TODO difference between winapi and ntdll api regarding system32 vs syswow64
@@ -763,7 +730,7 @@ static usvfs::shared::TreeFlags convertRedirectionFlags(unsigned int flags)
   return result;
 }
 
-BOOL WINAPI VirtualLinkDirectoryStatic(LPCWSTR source, LPCWSTR destination, unsigned int flags)
+BOOL WINAPI usvfsVirtualLinkDirectoryStatic(LPCWSTR source, LPCWSTR destination, unsigned int flags)
 {
   // TODO change notification not yet implemented
   try {
@@ -814,7 +781,7 @@ BOOL WINAPI VirtualLinkDirectoryStatic(LPCWSTR source, LPCWSTR destination, unsi
               continue;
             }
 
-            VirtualLinkDirectoryStatic((sourceW + file.fileName).c_str(),
+            usvfsVirtualLinkDirectoryStatic((sourceW + file.fileName).c_str(),
                                        (destinationW + file.fileName).c_str(), flags);
           }
         } else {
@@ -862,7 +829,7 @@ BOOL WINAPI VirtualLinkDirectoryStatic(LPCWSTR source, LPCWSTR destination, unsi
 }
 
 
-BOOL WINAPI CreateProcessHooked(LPCWSTR lpApplicationName
+BOOL WINAPI usvfsCreateProcessHooked(LPCWSTR lpApplicationName
                                 , LPWSTR lpCommandLine
                                 , LPSECURITY_ATTRIBUTES lpProcessAttributes
                                 , LPSECURITY_ATTRIBUTES lpThreadAttributes
@@ -911,7 +878,7 @@ BOOL WINAPI CreateProcessHooked(LPCWSTR lpApplicationName
 }
 
 
-BOOL WINAPI CreateVFSDump(LPSTR buffer, size_t *size)
+BOOL WINAPI usvfsCreateVFSDump(LPSTR buffer, size_t *size)
 {
   assert(size != nullptr);
   std::ostringstream output;
@@ -926,13 +893,13 @@ BOOL WINAPI CreateVFSDump(LPSTR buffer, size_t *size)
 }
 
 
-VOID WINAPI BlacklistExecutable(LPWSTR executableName)
+VOID WINAPI usvfsBlacklistExecutable(LPWSTR executableName)
 {
   context->blacklistExecutable(executableName);
 }
 
 
-VOID WINAPI ClearExecutableBlacklist()
+VOID WINAPI usvfsClearExecutableBlacklist()
 {
   context->clearExecutableBlacklist();
 }
@@ -962,19 +929,19 @@ VOID WINAPI usvfsClearSkipDirectories()
 }
 
 
-VOID WINAPI ForceLoadLibrary(LPWSTR processName, LPWSTR libraryPath)
+VOID WINAPI usvfsForceLoadLibrary(LPWSTR processName, LPWSTR libraryPath)
 {
   context->forceLoadLibrary(processName, libraryPath);
 }
 
 
-VOID WINAPI ClearLibraryForceLoads()
+VOID WINAPI usvfsClearLibraryForceLoads()
 {
   context->clearLibraryForceLoads();
 }
 
 
-VOID WINAPI PrintDebugInfo()
+VOID WINAPI usvfsPrintDebugInfo()
 {
   spdlog::get("usvfs")
       ->warn("===== debug {} =====", context->redirectionTable().shmName());
@@ -997,38 +964,7 @@ VOID WINAPI PrintDebugInfo()
       ->warn("===== / debug {} =====", context->redirectionTable().shmName());
 }
 
-
-// deprecated
-//
-void WINAPI USVFSInitParameters(USVFSParameters *parameters,
-                                const char *instanceName, bool debugMode,
-                                LogLevel logLevel,
-                                CrashDumpsType crashDumpsType,
-                                const char *crashDumpsPath)
-{
-  parameters->debugMode = debugMode;
-  parameters->logLevel = logLevel;
-  parameters->crashDumpsType = crashDumpsType;
-
-  strncpy_s(parameters->instanceName, instanceName, _TRUNCATE);
-  if (crashDumpsPath && *crashDumpsPath && strlen(crashDumpsPath) < _countof(parameters->crashDumpsPath)) {
-    memcpy(parameters->crashDumpsPath, crashDumpsPath, strlen(crashDumpsPath)+1);
-    parameters->crashDumpsType = crashDumpsType;
-  }
-  else {
-    // crashDumpsPath invalid or overflow of USVFSParameters variable so disable crash dumps:
-    parameters->crashDumpsPath[0] = 0;
-    parameters->crashDumpsType = CrashDumpsType::None;
-  }
-  // we can't use the whole buffer as we need a few bytes to store a running
-  // counter
-  strncpy_s(parameters->currentSHMName, 60, instanceName, _TRUNCATE);
-  memset(parameters->currentInverseSHMName, '\0', _countof(parameters->currentInverseSHMName));
-  _snprintf(parameters->currentInverseSHMName, 60, "inv_%s", instanceName);
-}
-
-
-const char* WINAPI USVFSVersionString()
+const char* WINAPI usvfsUSVFSVersionString()
 {
   return USVFS_VERSION_STRING;
 }

@@ -108,16 +108,23 @@ public:
 
     std::wcout << "Connecting VFS..." << std::endl;
 
-    USVFSParameters params;
-    USVFSInitParameters(&params, "usvfs_test", false, LogLevel::Debug, CrashDumpsType::None, "");
-    InitLogging(false);
-    CreateVFS(&params);
+    std::unique_ptr<usvfsParameters, decltype(&usvfsFreeParameters)> parameters{
+        usvfsCreateParameters(), &usvfsFreeParameters };
+
+    usvfsSetInstanceName(parameters.get(), "usvfs_test");
+    usvfsSetDebugMode(parameters.get(), true);
+    usvfsSetLogLevel(parameters.get(), LogLevel::Debug);
+    usvfsSetCrashDumpType(parameters.get(), CrashDumpsType::None);
+    usvfsSetCrashDumpPath(parameters.get(), "");
+
+    usvfsInitLogging(false);
+    usvfsCreateVFS(parameters.get());
 
     m_log_thread = std::thread(&usvfs_connector::usvfs_logger, this);
   }
 
   ~usvfs_connector() {
-    DisconnectVFS();
+    usvfsDisconnectVFS();
     m_exit_signal.set_value();
     m_log_thread.join();
   }
@@ -147,7 +154,7 @@ public:
 
     fprintf(log, "Updating VFS mappings:\n");
 
-    ClearVirtualMappings();
+    usvfsClearVirtualMappings();
 
     for (const auto& map : mappings) {
       const string& source = usvfs_test_base::SOURCE_LABEL +
@@ -158,17 +165,17 @@ public:
       {
       case map_type::dir:
         fprintf(log, "  mapdir: %s => %s\n", source.c_str(), destination.c_str());
-        VirtualLinkDirectoryStatic(map.source.c_str(), map.destination.c_str(), LINKFLAG_RECURSIVE);
+        usvfsVirtualLinkDirectoryStatic(map.source.c_str(), map.destination.c_str(), LINKFLAG_RECURSIVE);
         break;
 
       case map_type::dircreate:
         fprintf(log, "  mapdircreate: %s => %s\n", source.c_str(), destination.c_str());
-        VirtualLinkDirectoryStatic(map.source.c_str(), map.destination.c_str(), LINKFLAG_CREATETARGET|LINKFLAG_RECURSIVE);
+        usvfsVirtualLinkDirectoryStatic(map.source.c_str(), map.destination.c_str(), LINKFLAG_CREATETARGET|LINKFLAG_RECURSIVE);
         break;
 
       case map_type::file:
         fprintf(log, "  mapfile: %s => %s\n", source.c_str(), destination.c_str());
-        VirtualLinkFile(map.source.c_str(), map.destination.c_str(), LINKFLAG_RECURSIVE);
+        usvfsVirtualLinkFile(map.source.c_str(), map.destination.c_str(), LINKFLAG_RECURSIVE);
         break;
       }
     }
@@ -184,7 +191,7 @@ public:
     si.cb = sizeof(si);
     PROCESS_INFORMATION pi{ 0 };
 
-    if (!CreateProcessHooked(NULL, commandline, NULL, NULL, FALSE, 0, NULL, NULL, &si, &pi))
+    if (!usvfsCreateProcessHooked(NULL, commandline, NULL, NULL, FALSE, 0, NULL, NULL, &si, &pi))
       throw_testWinFuncFailed("CreateProcessHooked", string_cast<std::string>(commandline, CodePage::UTF8).c_str());
 
     WaitForSingleObject(pi.hProcess, INFINITE);
@@ -214,7 +221,7 @@ public:
     int noLogCycles = 0;
     std::chrono::milliseconds wait_for;
     do {
-      if (GetLogMessages(buf, size, false)) {
+      if (usvfsGetLogMessages(buf, size, false)) {
         fwrite(buf, 1, strlen(buf), m_usvfs_log);
         fwrite("\n", 1, 1, m_usvfs_log);
         fflush(m_usvfs_log);
@@ -228,7 +235,7 @@ public:
         wait_for = std::chrono::milliseconds(0);
     } while (m_exit_future.wait_for(wait_for) == std::future_status::timeout);
 
-    while (GetLogMessages(buf, size, false)) {
+    while (usvfsGetLogMessages(buf, size, false)) {
       fwrite(buf, 1, strlen(buf), m_usvfs_log);
       fwrite("\n", 1, 1, m_usvfs_log);
     }

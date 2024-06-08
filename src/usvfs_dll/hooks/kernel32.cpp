@@ -1635,7 +1635,7 @@ VOID WINAPI usvfs::hook_ExitProcess(UINT exitCode)
   // nor does any pre/post call macro
   LOG_CALL().PARAM(exitCode);
 
-  DisconnectVFS();
+  usvfsDisconnectVFS();
 
   //  HookManager::instance().removeHook("ExitProcess");
   //  PRE_REALCALL
