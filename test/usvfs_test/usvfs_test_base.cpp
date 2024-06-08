@@ -112,7 +112,7 @@ public:
         usvfsCreateParameters(), &usvfsFreeParameters };
 
     usvfsSetInstanceName(parameters.get(), "usvfs_test");
-    usvfsSetDebugMode(parameters.get(), true);
+    usvfsSetDebugMode(parameters.get(), false);
     usvfsSetLogLevel(parameters.get(), LogLevel::Debug);
     usvfsSetCrashDumpType(parameters.get(), CrashDumpsType::None);
     usvfsSetCrashDumpPath(parameters.get(), "");
