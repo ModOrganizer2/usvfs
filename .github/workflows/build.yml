@@ -42,7 +42,10 @@ jobs:
       - if: matrix.tests == 'Test'
         name: Build googletest
         run: |
-          cmake -B googletest/build_${{ matrix.arch }} -A ${{ matrix.arch == 'x86' && 'Win32' || 'x64' }} googletest
+          cmake -B googletest/build_${{ matrix.arch }} `
+            -A ${{ matrix.arch == 'x86' && 'Win32' || 'x64' }} `
+            -Dgtest_force_shared_crt=ON `
+            googletest
           cmake --build googletest/build_${{ matrix.arch }} --config ${{ matrix.config }}
       - name: Build
         run: |
