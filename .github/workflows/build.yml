@@ -17,9 +17,6 @@ jobs:
         arch: [x86, x64]
         config: [Debug, Release]
         tests: ["", "Test"]
-        exclude:
-          - config: Debug
-            tests: ""
     runs-on: windows-2022
     steps:
       - uses: actions/checkout@v4
