@@ -657,7 +657,7 @@ static bool fileNameInSkipDirectories(const std::string& directoryNameUtf8,
                                       const std::vector<std::string>& skipDirectories)
 {
   for (const auto& skipDir : skipDirectories) {
-    if (boost::algorithm::equals(directoryNameUtf8, skipDir)) {
+    if (boost::algorithm::iequals(directoryNameUtf8, skipDir)) {
       spdlog::get("usvfs")->debug("directory '{}' should be skipped",
                                   directoryNameUtf8);
       return true;
