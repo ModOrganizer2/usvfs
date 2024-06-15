@@ -29,24 +29,23 @@ namespace usvfs::shared
 template <typename T>
 using OffsetPtrT = bi::offset_ptr<T, std::int32_t, std::uint64_t>;
 
-typedef OffsetPtrT<void> VoidPointerT;
+using VoidPointerT = OffsetPtrT<void>;
 
-// important: the windows shared memory mechanism, unlike other implementations
+// important: the windows shared memory mechanism, unlike other implementations,
 // automatically removes the SHM object when there are no more "subscribers".
 // MO currently depends on that feature!
 
 // managed_windows_shared_memory apparently doesn't support sharing between
 // 64bit and 32bit processes
-typedef bi::basic_managed_windows_shared_memory
-   <char
-   , bi::rbtree_best_fit<bi::mutex_family, VoidPointerT, 8>
-   , bi::iset_index>
-managed_windows_shared_memory;
+using managed_windows_shared_memory = bi::basic_managed_windows_shared_memory<
+  char, bi::rbtree_best_fit<bi::mutex_family, VoidPointerT, 8>, bi::iset_index>;
 
-typedef managed_windows_shared_memory SharedMemoryT;
-typedef SharedMemoryT::segment_manager SegmentManagerT;
-typedef boost::container::scoped_allocator_adaptor<boost::interprocess::allocator<void, SegmentManagerT>> VoidAllocatorT;
-typedef VoidAllocatorT::rebind<char>::other CharAllocatorT;
-typedef bi::basic_string<char, std::char_traits<char>, CharAllocatorT> StringT;
+using SharedMemoryT = managed_windows_shared_memory;
+using SegmentManagerT = SharedMemoryT::segment_manager;
+
+using VoidAllocatorT = boost::container::scoped_allocator_adaptor<boost::interprocess::allocator<void, SegmentManagerT>>;
+using CharAllocatorT = VoidAllocatorT::rebind<char>::other;
+
+using StringT = bi::basic_string<char, std::char_traits<char>, CharAllocatorT> ;
 
 }  // namespace
