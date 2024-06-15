@@ -49,13 +49,13 @@ TEST(RedFileSystemTest, RedFileSystemTest)
 
   ASSERT_TRUE(exists(hudpainter_path / "DEFAULT.json"));
 
+  ASSERT_EQ(hudpainter_path / "TEST.json",
+            weakly_canonical(hudpainter_path / "TEST.json"));
+
   {
     std::ofstream of{hudpainter_path / "TEST.json"};
     of << "{}\n";
   }
-
-  // ASSERT_EQ(std::filesystem::path{}, weakly_canonical(hudpainter_path /
-  // "TEST.json"));
 }
 
 int main(int argc, char* argv[])

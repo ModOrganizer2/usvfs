@@ -116,12 +116,79 @@ typedef struct _FILE_ID_BOTH_DIR_INFORMATION {
   WCHAR FileName[1];
 } FILE_ID_BOTH_DIR_INFORMATION, *PFILE_ID_BOTH_DIR_INFORMATION;
 
+typedef struct _FILE_BASIC_INFORMATION
+{
+  LARGE_INTEGER CreationTime;
+  LARGE_INTEGER LastAccessTime;
+  LARGE_INTEGER LastWriteTime;
+  LARGE_INTEGER ChangeTime;
+  ULONG FileAttributes;
+} FILE_BASIC_INFORMATION, *PFILE_BASIC_INFORMATION;
+
+typedef struct _FILE_STANDARD_INFORMATION
+{
+  LARGE_INTEGER AllocationSize;
+  LARGE_INTEGER EndOfFile;
+  ULONG NumberOfLinks;
+  BOOLEAN DeletePending;
+  BOOLEAN Directory;
+} FILE_STANDARD_INFORMATION, *PFILE_STANDARD_INFORMATION;
+
 typedef struct _FILE_NAMES_INFORMATION {
   ULONG NextEntryOffset;
   ULONG FileIndex;
   ULONG FileNameLength;
   WCHAR FileName[1];
 } FILE_NAMES_INFORMATION, *PFILE_NAMES_INFORMATION;
+
+typedef struct _FILE_INTERNAL_INFORMATION
+{
+  LARGE_INTEGER IndexNumber;
+} FILE_INTERNAL_INFORMATION, *PFILE_INTERNAL_INFORMATION;
+
+typedef struct _FILE_EA_INFORMATION
+{
+  ULONG EaSize;
+} FILE_EA_INFORMATION, *PFILE_EA_INFORMATION;
+
+typedef struct _FILE_ACCESS_INFORMATION
+{
+  ACCESS_MASK AccessFlags;
+} FILE_ACCESS_INFORMATION, *PFILE_ACCESS_INFORMATION;
+
+typedef struct _FILE_POSITION_INFORMATION
+{
+  LARGE_INTEGER CurrentByteOffset;
+} FILE_POSITION_INFORMATION, *PFILE_POSITION_INFORMATION;
+
+typedef struct _FILE_MODE_INFORMATION
+{
+  ULONG Mode;
+} FILE_MODE_INFORMATION, *PFILE_MODE_INFORMATION;
+
+typedef struct _FILE_ALIGNMENT_INFORMATION
+{
+  ULONG AlignmentRequirement;
+} FILE_ALIGNMENT_INFORMATION, *PFILE_ALIGNMENT_INFORMATION;
+
+typedef struct _FILE_NAME_INFORMATION
+{
+  ULONG FileNameLength;
+  WCHAR FileName[1];
+} FILE_NAME_INFORMATION, *PFILE_NAME_INFORMATION;
+
+typedef struct _FILE_ALL_INFORMATION
+{
+  FILE_BASIC_INFORMATION BasicInformation;
+  FILE_STANDARD_INFORMATION StandardInformation;
+  FILE_INTERNAL_INFORMATION InternalInformation;
+  FILE_EA_INFORMATION EaInformation;
+  FILE_ACCESS_INFORMATION AccessInformation;
+  FILE_POSITION_INFORMATION PositionInformation;
+  FILE_MODE_INFORMATION ModeInformation;
+  FILE_ALIGNMENT_INFORMATION AlignmentInformation;
+  FILE_NAME_INFORMATION NameInformation;
+} FILE_ALL_INFORMATION, *PFILE_ALL_INFORMATION;
 
 typedef struct _FILE_OBJECTID_INFORMATION {
   LONGLONG FileReference;
@@ -158,13 +225,17 @@ typedef enum _FILE_INFORMATION_CLASS {
   FileDirectoryInformation       = 1,
   FileFullDirectoryInformation   = 2,
   FileBothDirectoryInformation   = 3,
+  FileStandardInformation        = 5,
+  FileNameInformation            = 9,
+  FileRenameInformation          = 10,
   FileNamesInformation           = 12,
+  FileAllInformation             = 18,
   FileObjectIdInformation        = 29,
   FileReparsePointInformation    = 33,
   FileIdBothDirectoryInformation = 37,
-  FileIdFullDirectoryInformation = 38
-} FILE_INFORMATION_CLASS,
-    *PFILE_INFORMATION_CLASS;
+  FileIdFullDirectoryInformation = 38,
+  FileNormalizedNameInformation  = 48,
+} FILE_INFORMATION_CLASS, *PFILE_INFORMATION_CLASS;
 
 typedef enum _MODE { KernelMode, UserMode, MaximumMode } MODE;
 
@@ -253,6 +324,12 @@ typedef struct _OBJECT_HANDLE_INFORMATION {
   ACCESS_MASK GrantedAccess;
 } OBJECT_HANDLE_INFORMATION, *POBJECT_HANDLE_INFORMATION;
 
+typedef enum _OBJECT_INFORMATION_CLASS
+{
+  ObjectBasicInformation = 0,
+  ObjectTypeInformation  = 2
+} OBJECT_INFORMATION_CLASS;
+
 typedef struct _RTL_RELATIVE_NAME {
   UNICODE_STRING RelativeName;
   HANDLE         ContainingDirectory;
@@ -268,14 +345,6 @@ typedef struct _FILE_NETWORK_OPEN_INFORMATION {
   LARGE_INTEGER EndOfFile;
   ULONG FileAttributes;
 } FILE_NETWORK_OPEN_INFORMATION, *PFILE_NETWORK_OPEN_INFORMATION;
-
-typedef struct _FILE_BASIC_INFORMATION {
-  LARGE_INTEGER CreationTime;
-  LARGE_INTEGER LastAccessTime;
-  LARGE_INTEGER LastWriteTime;
-  LARGE_INTEGER ChangeTime;
-  ULONG         FileAttributes;
-} FILE_BASIC_INFORMATION, *PFILE_BASIC_INFORMATION;
 
 #define FILE_DIRECTORY_FILE                       0x00000001
 #define FILE_WRITE_THROUGH                        0x00000002
@@ -302,55 +371,62 @@ typedef struct _FILE_BASIC_INFORMATION {
 #define FILE_OPEN_FOR_FREE_SPACE_QUERY            0x00800000
 #define FILE_CONTAINS_EXTENDED_CREATE_INFORMATION 0x10000000
 
-typedef NTSTATUS(WINAPI *NtQueryDirectoryFile_type)(
+// Nt
+
+using NtQueryDirectoryFile_type = NTSTATUS(WINAPI *)(
     HANDLE, HANDLE, PIO_APC_ROUTINE, PVOID, PIO_STATUS_BLOCK, PVOID, ULONG,
     FILE_INFORMATION_CLASS, BOOLEAN, PUNICODE_STRING, BOOLEAN);
-
-typedef NTSTATUS(WINAPI *NtQueryDirectoryFileEx_type)(
+using NtQueryDirectoryFileEx_type = NTSTATUS(WINAPI *)(
     HANDLE, HANDLE, PIO_APC_ROUTINE, PVOID, PIO_STATUS_BLOCK, PVOID, ULONG,
     FILE_INFORMATION_CLASS, ULONG, PUNICODE_STRING);
 
-typedef NTSTATUS(WINAPI *NtQueryFullAttributesFile_type)(
+using NtQueryFullAttributesFile_type = NTSTATUS(WINAPI *)(
     POBJECT_ATTRIBUTES, PFILE_NETWORK_OPEN_INFORMATION);
-
-typedef NTSTATUS(WINAPI *NtQueryAttributesFile_type)(POBJECT_ATTRIBUTES,
+using NtQueryAttributesFile_type = NTSTATUS(WINAPI *)(POBJECT_ATTRIBUTES,
                                                      PFILE_BASIC_INFORMATION);
 
-typedef NTSTATUS(WINAPI *NtOpenFile_type)(PHANDLE, ACCESS_MASK,
+using NtQueryObject_type = NTSTATUS (WINAPI *)(
+  HANDLE Handle, OBJECT_INFORMATION_CLASS ObjectInformationClass,
+  PVOID ObjectInformation, ULONG ObjectInformationLength, PULONG ReturnLength);
+using NtQueryInformationFile_type = NTSTATUS(WINAPI*)(
+    HANDLE FileHandle, PIO_STATUS_BLOCK IoStatusBlock, PVOID FileInformation,
+    ULONG Length, FILE_INFORMATION_CLASS FileInformationClass);
+
+using NtOpenFile_type = NTSTATUS(WINAPI *)(PHANDLE, ACCESS_MASK,
                                           POBJECT_ATTRIBUTES, PIO_STATUS_BLOCK,
                                           ULONG, ULONG);
-
-typedef NTSTATUS(WINAPI *NtCreateFile_type)(PHANDLE, ACCESS_MASK,
+using NtCreateFile_type = NTSTATUS(WINAPI *)(PHANDLE, ACCESS_MASK,
                                             POBJECT_ATTRIBUTES,
                                             PIO_STATUS_BLOCK, PLARGE_INTEGER,
                                             ULONG, ULONG, ULONG, ULONG, PVOID,
                                             ULONG);
 
-typedef NTSTATUS(WINAPI *NtClose_type)(HANDLE);
+using NtClose_type = NTSTATUS(WINAPI *)(HANDLE);
 
-typedef NTSYSAPI BOOLEAN(NTAPI *RtlDoesFileExists_U_type)(PCWSTR);
+using NtTerminateProcess_type = NTSTATUS(WINAPI *)(HANDLE ProcessHandle, NTSTATUS ExitStatus);
 
-typedef NTSTATUS(NTAPI *RtlDosPathNameToRelativeNtPathName_U_WithStatus_type)(
+// Rtl
+
+using RtlDoesFileExists_U_type = NTSYSAPI BOOLEAN(NTAPI *)(PCWSTR);
+using RtlDosPathNameToRelativeNtPathName_U_WithStatus_type = NTSTATUS(NTAPI *)(
   PCWSTR DosFileName, PUNICODE_STRING NtFileName, PWSTR* FilePath, PRTL_RELATIVE_NAME RelativeName);
-
-typedef void (NTAPI *RtlReleaseRelativeName_type)(PRTL_RELATIVE_NAME RelativeName);
-
-typedef NTSTATUS (NTAPI *RtlGetVersion_type)(PRTL_OSVERSIONINFOW);
-
-typedef NTSTATUS(WINAPI *NtTerminateProcess_type)(HANDLE ProcessHandle, NTSTATUS ExitStatus);
+using RtlReleaseRelativeName_type = void (NTAPI *)(PRTL_RELATIVE_NAME RelativeName);
+using RtlGetVersion_type = NTSTATUS (NTAPI *)(PRTL_OSVERSIONINFOW);
 
 extern NtQueryDirectoryFile_type NtQueryDirectoryFile;
 extern NtQueryDirectoryFileEx_type NtQueryDirectoryFileEx;
 extern NtQueryFullAttributesFile_type NtQueryFullAttributesFile;
 extern NtQueryAttributesFile_type NtQueryAttributesFile;
+extern NtQueryObject_type NtQueryObject;
+extern NtQueryInformationFile_type NtQueryInformationFile;
 extern NtOpenFile_type NtOpenFile;
 extern NtCreateFile_type NtCreateFile;
 extern NtClose_type NtClose;
+extern NtTerminateProcess_type NtTerminateProcess;
 extern RtlDoesFileExists_U_type RtlDoesFileExists_U;
 extern RtlDosPathNameToRelativeNtPathName_U_WithStatus_type RtlDosPathNameToRelativeNtPathName_U_WithStatus;
 extern RtlReleaseRelativeName_type RtlReleaseRelativeName;
 extern RtlGetVersion_type RtlGetVersion;
-extern NtTerminateProcess_type NtTerminateProcess;
 
 // ensures ntdll functions have been initialized (only needed during static objects initialization)
 void ntdll_declarations_init();

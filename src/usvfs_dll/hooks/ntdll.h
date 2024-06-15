@@ -40,6 +40,22 @@ hook_NtQueryDirectoryFileEx(HANDLE FileHandle,
                        ULONG QueryFlags,
                        PUNICODE_STRING FileName);
 
+DLLEXPORT NTSTATUS WINAPI 
+hook_NtQueryObject(
+  HANDLE Handle, 
+  OBJECT_INFORMATION_CLASS ObjectInformationClass,
+  PVOID ObjectInformation, 
+  ULONG ObjectInformationLength, 
+  PULONG ReturnLength);
+
+DLLEXPORT NTSTATUS WINAPI 
+hook_NtQueryInformationFile(
+  HANDLE FileHandle, 
+  PIO_STATUS_BLOCK IoStatusBlock, 
+  PVOID FileInformation,
+  ULONG Length, 
+  FILE_INFORMATION_CLASS FileInformationClass);
+
 DLLEXPORT NTSTATUS WINAPI hook_NtOpenFile(PHANDLE FileHandle,
                                      ACCESS_MASK DesiredAccess,
                                      POBJECT_ATTRIBUTES ObjectAttributes,

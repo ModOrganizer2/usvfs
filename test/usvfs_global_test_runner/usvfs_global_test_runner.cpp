@@ -261,7 +261,7 @@ int usvfs_test_runner::run() const
   const auto data = m_temporary_folder / L"data";
 
   // prepare usvfs and mapping
-  usvfs_guard guard;
+  usvfs_guard guard{"usvfs_test", true};
 
   prepare_mapping(data, m_temporary_folder / L"mods",
                   m_temporary_folder / L"overwrite");
@@ -271,6 +271,14 @@ int usvfs_test_runner::run() const
       {std::format(L"--gtest_filter={}.*", m_group), data.native()});
 
   if (res != 0) {
+    const auto log_path = test::path_of_test_bin(m_group + L".log");
+    std::ofstream os{log_path};
+    std::string buffer(1024, '\0');
+    std::cout << "process returned " << std::hex << res << ", usvfs logs dumped to "
+              << log_path.string() << '\n';
+    while (usvfsGetLogMessages(buffer.data(), buffer.size(), false)) {
+      os << "  " << buffer.c_str() << "\n";
+    }
     return res;
   }
 
@@ -322,6 +330,8 @@ int main(int argc, char* argv[])
   }
 
   testing::InitGoogleTest(&argc, argv);
+
+  usvfsInitLogging(false);
 
   return RUN_ALL_TESTS();
 }
