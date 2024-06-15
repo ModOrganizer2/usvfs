@@ -267,9 +267,6 @@
     <ClCompile Include="..\test\shared_test\main.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="fmt.vcxproj">
-      <Project>{e75f344a-1373-4e3f-97ea-bc80ca42e0f0}</Project>
-    </ProjectReference>
     <ProjectReference Include="shared.vcxproj">
       <Project>{2bb3300b-f08a-4063-95c4-8a0fadae6c51}</Project>
     </ProjectReference>
