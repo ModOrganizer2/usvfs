@@ -171,7 +171,7 @@ public:
   _Create &stdoutPipe();
 
   /// @brief end the named parameter cascade and create the process
-  Result _Create<CharT>::operator()()
+  Result operator()()
   {
     m_CommandLine.seekp(0, std::ios::end);
     unsigned int length = static_cast<unsigned int>(m_CommandLine.tellp());

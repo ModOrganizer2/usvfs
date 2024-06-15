@@ -42,23 +42,42 @@ namespace test {
 
     DWORD lastError() const { return m_gle; }
 
-    WinFuncFailed operator()(const char* func);
-    WinFuncFailed operator()(const char* func, unsigned long res);
-    WinFuncFailed operator()(const char* func, const char* arg1);
-    WinFuncFailed operator()(const char* func, const char* arg1, unsigned long res);
+    WinFuncFailed operator()(std::basic_string_view<char> func)
+    {
+      return WinFuncFailed(std::format("{} failed : lastError={}", func, m_gle));
+    }
+
+    WinFuncFailed operator()(std::basic_string_view<char> func, unsigned long res)
+    {
+      return WinFuncFailed(std::format("{} failed : result=({:#x}), lastError={}", func, res, m_gle));
+    }
+
+    WinFuncFailed operator()(std::basic_string_view<char> func, std::basic_string_view<char> arg1)
+    {
+      return WinFuncFailed(std::format("{} failed : {}, lastError={}", func, arg1, m_gle));
+    }
+
+    WinFuncFailed operator()(std::basic_string_view<char> func, std::basic_string_view<char> arg1, unsigned long res)
+    {
+      return WinFuncFailed(std::format("{} failed : {}, result=({:#x}), lastError={}", func, arg1, res, m_gle));
+    }
 
   private:
     DWORD m_gle;
   };
 
   // trick to guarantee the evalutation of GetLastError() before the evalution of the parameters to the WinFuncFailed message generation
-#define throw_testWinFuncFailed(...) do { ::test::WinFuncFailedGenerator exceptionGenerator; throw exceptionGenerator(__VA_ARGS__); } while (false)
+  template <class... Args>
+  [[noreturn]] void throw_testWinFuncFailed(std::basic_string_view<char> func, Args&&... args) {
+    ::test::WinFuncFailedGenerator exceptionGenerator; 
+    throw exceptionGenerator(func, std::forward<Args>(args)... );
+  }
 
   class ScopedFILE {
   public:
     ScopedFILE(FILE* f = nullptr) : m_f(f) {}
     ScopedFILE(const ScopedFILE&) = delete;
-    ScopedFILE(ScopedFILE&& other) : m_f(other.m_f) { other.m_f = nullptr; }
+    ScopedFILE(ScopedFILE&& other) noexcept : m_f(other.m_f) { other.m_f = nullptr; }
     ~ScopedFILE() { if (m_f) fclose(m_f); }
 
     void close() { if (m_f) { fclose(m_f); m_f = nullptr; } }
