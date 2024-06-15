@@ -4,9 +4,6 @@
 [submodule "udis86"]
 	path = udis86
 	url = https://github.com/ModOrganizer2/udis86
-[submodule "fmt"]
-	path = fmt
-	url = https://github.com/fmtlib/fmt.git
 [submodule "spdlog"]
 	path = spdlog
 	url = https://github.com/gabime/spdlog.git
