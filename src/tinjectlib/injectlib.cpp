@@ -18,13 +18,15 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with usvfs. If not, see <http://www.gnu.org/licenses/>.
 */
+#include <stdexcept>
+#include <cstdio>
+
 #include <boost/predef.h>
 #include <boost/filesystem.hpp>
 #include <boost/static_assert.hpp>
 #include <boost/type_traits.hpp>
 namespace fs = boost::filesystem;
 
-#include <stdexcept>
 #include "injectlib.h"
 #include <stringutils.h>
 #include <stringcast.h>
@@ -32,8 +34,6 @@ namespace fs = boost::filesystem;
 #include <addrtools.h>
 // local version of asmjit with warning suppression
 #include "asmjit_sane.h"
-#include <fmt/format.h>
-#include <cstdio>
 #include <spdlog.h>
 #include <TlHelp32.h>
 
@@ -415,9 +415,6 @@ void InjectDLLRemoteThread(HANDLE processHandle
                                            , 0);
 
   DWORD threadId = 0UL;
-
-  //MessageBoxA(nullptr, fmt::format("address: {0:x} - {1:x}", stubAddress, GetProcessId(processHandle)).c_str(), "", MB_OK);
-
   HANDLE threadHandle = CreateRemoteThread(processHandle, nullptr, 0,
                                              reinterpret_cast<LPTHREAD_START_ROUTINE>(stubAddress),
                                              nullptr, 0, &threadId);
