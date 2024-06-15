@@ -92,5 +92,8 @@
     <ClInclude Include="..\src\shared\wildcard.h">
       <Filter>src</Filter>
     </ClInclude>
+    <ClInclude Include="..\src\shared\formatters.h">
+      <Filter>src</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>

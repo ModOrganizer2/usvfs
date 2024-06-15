@@ -31,14 +31,14 @@ UnicodeString::UnicodeString(LPCWSTR string, size_t length)
   if (length == std::string::npos) {
     length = wcslen(string);
   }
-  m_Buffer.resize(length+1);
+  m_Buffer.resize(length + 1);
   memcpy(m_Buffer.data(), string, length * sizeof(wchar_t));
   update();
 }
 
 UnicodeString::UnicodeString(const std::wstring& string)
 {
-  m_Buffer.resize(string.length()+1);
+  m_Buffer.resize(string.length() + 1);
   memcpy(m_Buffer.data(), string.data(), string.length() * sizeof(wchar_t));
   update();
 }
@@ -51,7 +51,7 @@ UnicodeString& UnicodeString::operator=(const std::wstring& string)
   return *this;
 }
 
-UnicodeString &UnicodeString::appendPath(PUNICODE_STRING path)
+UnicodeString& UnicodeString::appendPath(PUNICODE_STRING path)
 {
   if (path != nullptr && path->Buffer && path->Length) {
     auto appendAt = size();
@@ -71,30 +71,8 @@ UnicodeString &UnicodeString::appendPath(PUNICODE_STRING path)
 void UnicodeString::update()
 {
   m_Data.Length = static_cast<USHORT>(size() * sizeof(WCHAR));
-  m_Data.MaximumLength = static_cast<USHORT>((m_Buffer.capacity()-1) * sizeof(WCHAR));
+  m_Data.MaximumLength = static_cast<USHORT>((m_Buffer.capacity() - 1) * sizeof(WCHAR));
   m_Data.Buffer = m_Buffer.data();
 }
 
-std::ostream &operator<<(std::ostream &os, const UnicodeString &str)
-{
-  try
-  {
-    if (str.size() == 0) {
-      os << "<empty string>";
-    } else {
-      // TODO this does not correctly support surrogate pairs since the size used here
-      // is the number of 16-bit characters in the buffer whereas toNarrow expects the
-      // actual number of characters. It will always underestimate though, so worst
-      // case scenario we truncate the string
-      os << shared::string_cast<std::string>(&str.m_Buffer[0], shared::CodePage::UTF8, str.size());
-    }
-  }
-  catch (const std::exception &e)
-  {
-    os << e.what();
-  }
-
-  return os;
 }
-
-} // namespace

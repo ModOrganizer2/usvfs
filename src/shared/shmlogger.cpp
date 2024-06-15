@@ -118,28 +118,27 @@ void SHMLogger::get(char *buffer, size_t bufferSize)
 }
 
 
-spdlog::sinks::shm_sink::shm_sink(const char *queueName)
+usvfs::sinks::shm_sink::shm_sink(const char *queueName)
   : m_LogQueue(open_only, (std::string("__shm_sink_") + queueName).c_str()), m_DroppedMessages(0)
 {
 }
 
-void spdlog::sinks::shm_sink::flush()
+void usvfs::sinks::shm_sink::flush_()
 {
 }
 
-void spdlog::sinks::shm_sink::log(const details::log_msg &msg)
+void usvfs::sinks::shm_sink::sink_it_(const spdlog::details::log_msg &msg)
 {
   int droppedMessages = m_DroppedMessages.load(std::memory_order_relaxed);
   if (droppedMessages > 0) {
-    std::string dropMessage
-        = fmt::format("{} debug messages dropped", droppedMessages);
+    auto dropMessage = std::format("{} debug messages dropped", droppedMessages);
     if (m_LogQueue.try_send(dropMessage.c_str(),
                             static_cast<unsigned int>(dropMessage.size()), 0)) {
       m_DroppedMessages.store(0, std::memory_order_relaxed);
     }
   }
 
-  std::string message = msg.formatted.str();
+  std::string message{ msg.payload };
 
   // blacklist %USERNAME% because PII
   static const std::string username = std::string(getenv("USERNAME"));
@@ -158,7 +157,7 @@ void spdlog::sinks::shm_sink::log(const details::log_msg &msg)
   }
 }
 
-void spdlog::sinks::shm_sink::output(level::level_enum lev,
+void usvfs::sinks::shm_sink::output(spdlog::level::level_enum lev,
                                      const std::string &message)
 {
   bool sent = true;
@@ -171,15 +170,15 @@ void spdlog::sinks::shm_sink::output(level::level_enum lev,
   // depending on the log level, drop less important messages if the receiver
   // can't keep up
   switch (lev) {
-    case level::trace:
-    case level::debug:
-    case level::info: {
+    case spdlog::level::trace:
+    case spdlog::level::debug:
+    case spdlog::level::info: {
       // m_LogQueue.send(message.c_str(), count, 0);
       sent = m_LogQueue.try_send(message.c_str(),
                                  static_cast<unsigned int>(count), 0);
     } break;
-    case level::err:
-    case level::critical: {
+    case spdlog::level::err:
+    case spdlog::level::critical: {
       m_LogQueue.send(message.c_str(), static_cast<unsigned int>(count), 0);
     } break;
     default: {

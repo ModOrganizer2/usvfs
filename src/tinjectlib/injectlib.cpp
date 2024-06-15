@@ -34,7 +34,7 @@ namespace fs = boost::filesystem;
 #include <addrtools.h>
 // local version of asmjit with warning suppression
 #include "asmjit_sane.h"
-#include <spdlog.h>
+#include <spdlog/spdlog.h>
 #include <TlHelp32.h>
 
 using namespace asmjit;

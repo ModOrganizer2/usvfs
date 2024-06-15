@@ -79,6 +79,6 @@
 #include <boost/tokenizer.hpp>
 #include <boost/type_traits.hpp>
 
-#include <spdlog.h>
+#include <spdlog/spdlog.h>
 
 namespace fs = boost::filesystem;

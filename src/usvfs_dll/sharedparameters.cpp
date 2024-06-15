@@ -177,7 +177,7 @@ bool SharedParameters::executableBlacklisted(
       if (!appName.empty()) {
         if (boost::algorithm::iends_with(appName, item)) {
           blacklisted = true;
-          log = fmt::format("application {} is blacklisted", appName);
+          log = std::format("application {} is blacklisted", appName);
           break;
         }
       }
@@ -185,7 +185,7 @@ bool SharedParameters::executableBlacklisted(
       if (!cmdLine.empty()) {
         if (boost::algorithm::icontains(cmdLine, item)) {
           blacklisted = true;
-          log = fmt::format("command line {} is blacklisted", cmdLine);
+          log = std::format("command line {} is blacklisted", cmdLine);
           break;
         }
       }

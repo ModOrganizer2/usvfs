@@ -31,6 +31,7 @@ along with usvfs. If not, see <http://www.gnu.org/licenses/>.
 #include <shmlogger.h>
 #include <addrtools.h>
 #include <winapi.h>
+#include <formatters.h>
 
 #if BOOST_ARCH_X86_64
 #pragma message("64bit build")

@@ -26,7 +26,7 @@ along with usvfs. If not, see <http://www.gnu.org/licenses/>.
 #include <sharedparameters.h>
 #include <../usvfs_dll/hookcontext.h>
 #include <shmlogger.h>
-#include <spdlog.h>
+#include <spdlog/spdlog.h>
 #include <winapi.h>
 #include <boost/filesystem.hpp>
 #include <boost/lexical_cast.hpp>
@@ -103,7 +103,7 @@ int main(int argc, char **argv) {
   std::string instance;
   try {
     SHMLogger::open("usvfs");
-    logger = spdlog::create<spdlog::sinks::shm_sink>("usvfs", "usvfs");
+    logger = spdlog::create<usvfs::sinks::shm_sink>("usvfs", "usvfs");
     logger->set_pattern("%H:%M:%S.%e [%L] (proxy) %v");
 
     instance = getParameter<std::string>(arguments, "instance", true);

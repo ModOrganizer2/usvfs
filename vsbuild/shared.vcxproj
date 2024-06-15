@@ -312,6 +312,7 @@
     <ClInclude Include="..\src\shared\addrtools.h" />
     <ClInclude Include="..\src\shared\directory_tree.h" />
     <ClInclude Include="..\src\shared\exceptionex.h" />
+    <ClInclude Include="..\src\shared\formatters.h" />
     <ClInclude Include="..\src\shared\loghelpers.h" />
     <ClInclude Include="..\src\shared\ntdll_declarations.h" />
     <ClInclude Include="..\src\shared\pch.h" />

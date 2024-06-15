@@ -20,28 +20,34 @@ along with usvfs. If not, see <http://www.gnu.org/licenses/>.
 */
 #pragma once
 
+#include <spdlog/sinks/base_sink.h>
+#include <spdlog/details/null_mutex.h>
+
 #include "logging.h"
 #include "windows_sane.h"
 #include "shared_memory.h"
 
 typedef boost::interprocess::message_queue_t<usvfs::shared::VoidPointerT> message_queue_interop;
 
-namespace spdlog::sinks
+namespace usvfs::sinks
 {
-
-class shm_sink : public sink
+class shm_sink : public spdlog::sinks::base_sink<spdlog::details::null_mutex>
 {
 public:
   shm_sink(const char *queueName);
 
-  void log(const details::log_msg &msg) override;
-  void output(level::level_enum lev, const std::string &message);
-  void flush() override;
+protected:
+
+  void sink_it_(const spdlog::details::log_msg& msg) override;
+  void output(spdlog::level::level_enum lev, const std::string& message);
+  void flush_() override;
+
 
 private:
   message_queue_interop m_LogQueue;
   std::atomic<int> m_DroppedMessages;
 };
+
 
 } // namespace
 

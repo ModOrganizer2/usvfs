@@ -21,10 +21,7 @@ along with usvfs. If not, see <http://www.gnu.org/licenses/>.
 #include <string>
 #include <utility>
 
-#include <spdlog.h>
-
-// TODO: find a better than fetching the bundled fmt from spdlog
-#include <fmt/bundled/ostream.h>
+#include <spdlog/spdlog.h>
 
 #include <boost/filesystem.hpp>
 
@@ -37,6 +34,7 @@ along with usvfs. If not, see <http://www.gnu.org/licenses/>.
 #include <injectlib.h>
 #include <stringutils.h>
 #include <stringcast.h>
+#include <formatters.h>
 
 namespace ush = usvfs::shared;
 
@@ -110,7 +108,7 @@ void usvfs::injectProcess(const std::wstring &applicationPath
                     + ush::string_cast<std::string>(preferedDll.wstring()).c_str()));
     }
 
-    spdlog::get("usvfs")->info("dll path: {}", log::wrap(dllPath.wstring()));
+    spdlog::get("usvfs")->info("dll path: {}", dllPath.wstring());
 
     InjectLib::InjectDLL(processHandle, threadHandle, dllPath.c_str(),
                          "InitHooks", &parameters, sizeof(parameters));

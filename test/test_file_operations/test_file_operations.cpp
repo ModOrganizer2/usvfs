@@ -241,9 +241,9 @@ private:
       m_api->create_path(real.parent_path());
     }
     catch (const std::exception& e) {
-      fmt::MemoryWriter msg;
-      msg << "Failed to create_path [" << m_api->relative_path(real.parent_path()).string() << "] : " << e.what();
-      throw std::runtime_error(msg.str());
+      throw std::runtime_error(std::format(
+        "Failed to create_path [{}] : {}", m_api->relative_path(real.parent_path()).string(), e.what()
+      ));
     }
     return std::move(real);
   }

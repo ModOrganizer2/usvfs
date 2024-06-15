@@ -18,6 +18,9 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with usvfs. If not, see <http://www.gnu.org/licenses/>.
 */
+#include <format>
+
+#include "formatters.h"
 #include "loghelpers.h"
 #include "stringcast.h"
 #include "stringutils.h"
@@ -27,134 +30,36 @@ namespace ush = usvfs::shared;
 namespace usvfs::log
 {
 
-std::ostream& operator<<(std::ostream &os, const Wrap<DWORD> &value)
+// this is declared in formatters but is defined here to avoid a whole .cpp
+// file for two small functions
+//
+// comments from old code, taken as is:
+// 
+//    TODO this does not correctly support surrogate pairs since the size used here
+//    is the number of 16-bit characters in the buffer whereas toNarrow expects the
+//    actual number of characters. It will always underestimate though, so worst
+//    case scenario we truncate the string
+//
+std::string to_string(LPCWSTR value)
 {
-  ush::FormatGuard guard(os);
-  os << std::hex << value.data();
-  return os;
-}
-
-std::ostream& operator<<(std::ostream &os, const Wrap<NTSTATUS> &status)
-{
-  switch (status.data()) {
-    case 0x00000000: {
-      os << "ok";
-    } break;
-    case 0xC0000022: {
-      os << "access denied";
-    } break;
-    case 0xC0000035: {
-      os << "exists already";
-    } break;
-    default: {
-      ush::FormatGuard guard(os);
-      os << "err " << std::hex << (int)status.data();
-    } break;
+  if (value == nullptr) {
+    return "<null>";
   }
-  return os;
+  try {
+    return ush::string_cast<std::string>(value, ush::CodePage::UTF8);
+  }
+  catch (const std::exception& e) {
+    return std::format("<err: {}>", e.what());
+  }
 }
-
-
-std::ostream& operator<<(std::ostream &os, const Wrap<PUNICODE_STRING> &str)
+std::string to_string(PCUNICODE_STRING value)
 {
   try {
-    // TODO this does not correctly support surrogate pairs since the size used here
-    // is the number of 16-bit characters in the buffer whereas toNarrow expects the
-    // actual number of characters. It will always underestimate though, so worst
-    // case scenario we truncate the string
-    if (str.data() == nullptr) {
-      os << "<null>";
-    } else {
-      os << ush::string_cast<std::string>(str.data()->Buffer
-                                          , ush::CodePage::UTF8
-                                          , str.data()->Length / sizeof(WCHAR));
-    }
-  } catch (const std::exception &e) {
-    os << e.what();
+    return ush::string_cast<std::string>(value->Buffer, ush::CodePage::UTF8, value->Length / sizeof(WCHAR));
   }
-
-  return os;
-}
-
-static void writeToStream(std::ostream &os, LPCSTR str)
-{
-  if (str == nullptr) {
-    os << "<null>";
+  catch (const std::exception& e) {
+    return std::format("<err: {}>", e.what());
   }
-  else {
-    os << str;
-  }
-}
-
-static void writeToStream(std::ostream &os, LPCWSTR str)
-{
-  if (str == nullptr) {
-    os << "<null>";
-  } else {
-    os << ush::string_cast<std::string>(str, ush::CodePage::UTF8);
-  }
-}
-
-std::ostream& operator<<(std::ostream &os, const Wrap<LPSTR> &str)
-{
-  try {
-    writeToStream(os, str.data());
-  }
-  catch (const std::exception &e) {
-    os << e.what();
-  }
-
-  return os;
-}
-
-std::ostream& operator<<(std::ostream &os, const Wrap<LPCSTR> &str)
-{
-  try {
-    writeToStream(os, str.data());
-  }
-  catch (const std::exception &e) {
-    os << e.what();
-  }
-
-  return os;
-}
-
-std::ostream& operator<<(std::ostream &os, const Wrap<LPWSTR> &str)
-{
-  try {
-    writeToStream(os, str.data());
-  } catch (const std::exception &e) {
-    os << e.what();
-  }
-
-  return os;
-}
-
-
-std::ostream& operator<<(std::ostream &os, const Wrap<LPCWSTR> &str)
-{
-  try {
-    writeToStream(os, str.data());
-  } catch (const std::exception &e) {
-    os << e.what();
-  }
-
-  return os;
-}
-
-std::ostream& operator<<(std::ostream &os, const Wrap<std::wstring> &str)
-{
-  try {
-    // TODO this does not correctly support surrogate pairs since the size used here
-    // is the number of 16-bit characters in the buffer whereas toNarrow expects the
-    // actual number of characters. It will always underestimate though, so worst
-    // case scenario we truncate the string
-    os << ush::string_cast<std::string>(str.data(), ush::CodePage::UTF8);
-  } catch (const std::exception &e) {
-    os << e.what();
-  }
-
-  return os;
 }
 
 spdlog::level::level_enum ConvertLogLevel(LogLevel level)
@@ -180,65 +85,3 @@ LogLevel ConvertLogLevel(spdlog::level::level_enum level)
 }
 
 } // namespace
-
-
-namespace std
-{
-
-std::ostream& operator<<(ostream &os, LPCWSTR str)
-{
-
-  try {
-    // TODO this does not correctly support surrogate pairs since the size used here
-    // is the number of 16-bit characters in the buffer whereas toNarrow expects the
-    // actual number of characters.
-    if (str == nullptr) {
-      os << "<null>";
-    }
-    else {
-      //os << ush::string_cast_impl<std::string, const wchar_t*>::cast(str, ush::CodePage::UTF8, 32);
-
-      os << ush::string_cast<string>(str, ush::CodePage::UTF8);
-    }
-  }
-  catch (const exception &e) {
-    os << "ERR: " << e.what();
-  }
-
-  return os;
-}
-
-std::ostream& operator<<(ostream &os, const wstring &str)
-{
-  try {
-    os << ush::string_cast<string>(str, ush::CodePage::UTF8);
-  }
-  catch (const exception &e) {
-    os << "ERR: " << e.what();
-  }
-
-  return os;
-}
-
-std::ostream& operator<<(ostream &os, LPWSTR str)
-{
-  try {
-    // TODO this does not correctly support surrogate pairs since the size used here
-    // is the number of 16-bit characters in the buffer whereas toNarrow expects the
-    // actual number of characters. It will always underestimate though, so worst
-    // case scenario we truncate the string
-    if (str == nullptr) {
-      os << "<null>";
-    }
-    else {
-      os << ush::string_cast<string>(str, ush::CodePage::UTF8);
-    }
-  }
-  catch (const exception &e) {
-    os << "ERR: " << e.what();
-  }
-
-  return os;
-}
-
-}  // namespace

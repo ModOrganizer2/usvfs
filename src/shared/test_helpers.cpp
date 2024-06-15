@@ -2,6 +2,8 @@
 
 #if USVFS_BUILD_TESTS
 
+#include <format>
+
 #include "test_helpers.h"
 #include "winapi.h"
 
@@ -9,18 +11,19 @@ namespace test {
 
   std::string FuncFailed::msg(const char* func, const char* arg1, const unsigned long* res, const char* what)
   {
-    fmt::MemoryWriter msg;
-    msg << func << "() " << (what ? what : "failed");
+    std::string buffer;
+    buffer.reserve(128);
+
+    std::format_to(std::back_inserter(buffer), "{}() {}", func, what ? what : "failed");
     const char* sep = " : ";
     if (arg1) {
-      msg << sep << arg1;
+      std::format_to(std::back_inserter(buffer), "{}{}", sep, arg1);
       sep = ", ";
     }
     if (res) {
-      msg << sep << "result = " << *res << " (0x" << fmt::hex(*res) << ")";
-      sep = ", ";
+      std::format_to(std::back_inserter(buffer), "{}result = {} ({:#x})", sep, *res, *res);
     }
-    return msg.str();
+    return buffer;
   }
 
   path path_of_test_bin(const path& relative) {

@@ -5,6 +5,7 @@
 #include <shared_memory.h>
 #include <boost/interprocess/shared_memory_object.hpp>
 #include <boost/interprocess/containers/string.hpp>
+#include <spdlog/sinks/stdout_sinks.h>
 
 #define PRIVATE public
 #include <directory_tree.h>

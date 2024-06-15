@@ -20,21 +20,11 @@ along with usvfs. If not, see <http://www.gnu.org/licenses/>.
 */
 #pragma once
 
-
 #include "dllimport.h"
 #include "shmlogger.h"
 #include "stringutils.h"
 #include "ntdll_declarations.h"
-
-// TODO according to the standard (17.4.3.1) I shouldn't add these to std but
-// if they are in global namespace the lookup seems to fail?
-namespace std
-{
-  ostream &operator<<(ostream &os, LPCWSTR str);
-  ostream &operator<<(ostream &os, LPWSTR str);
-  ostream &operator<<(ostream &os, const wstring &str);
-}
-
+#include "formatters.h"
 
 namespace usvfs::log
 {
@@ -67,7 +57,7 @@ public:
       function = namespaceend + 1;
     }
 
-    m_Message << function;
+    m_Message = function;
   }
 
   ~CallLogger()
@@ -75,7 +65,7 @@ public:
     try
     {
       static std::shared_ptr<spdlog::logger> log = spdlog::get("hooks");
-      log->debug("{}", m_Message.str());
+      log->debug("{}", m_Message);
     }
     catch (...)
     {
@@ -87,23 +77,7 @@ public:
   CallLogger &addParam(const char *name, const T &value, uint8_t style = 0);
 
 private:
-  std::ostringstream m_Message;
-
-  template <typename T>
-  void outputParam(std::ostream &stream, const T &value, std::false_type)
-  {
-    stream << value;
-  }
-
-  template <typename T>
-  void outputParam(std::ostream &stream, const T &value, std::true_type)
-  {
-    if (value == nullptr) {
-      stream << "<null>";
-    } else {
-      stream << value;
-    }
-  }
+  std::string m_Message;
 };
 
 
@@ -114,71 +88,34 @@ CallLogger &CallLogger::addParam(const char *name, const T &value, uint8_t style
   typedef std::underlying_type<DisplayStyle>::type DSType;
 
   if (enabled) {
-    m_Message << " [" << name << "=";
-    if (style & static_cast<DSType>(DisplayStyle::Hex)) {
-      m_Message << std::hex;
-    } else {
-      m_Message << std::dec;
+    if constexpr (std::is_pointer_v<T>) {
+      if (value == nullptr) {
+        std::format_to(std::back_inserter(m_Message), "[{}=<null>]", name);
+      }
+      else {
+        std::format_to(std::back_inserter(m_Message), "[{}={}]", name, value);
+      }
     }
-
-    outputParam(m_Message, value, std::is_pointer<T>());
-
-    m_Message << "]";
+    else if constexpr (std::is_integral_v<T>) {
+      if (style & static_cast<DSType>(DisplayStyle::Hex)) {
+        std::format_to(std::back_inserter(m_Message), "[{}={:x}]", name, value);
+      }
+      else {
+        std::format_to(std::back_inserter(m_Message), "[{}={}]", name, value);
+      }
+    }
+    else {
+      std::format_to(std::back_inserter(m_Message), "[{}={}]", name, value);
+    }
   }
 
   return *this;
 }
 
-/**
- * a small helper class to wrap any object. The whole point is to give us a way
- * to ensure our own operator<< is used in addParam calls
- */
-template <typename T>
-class Wrap
-{
-public:
-  explicit Wrap(const T &data) : m_Data(data)
-  {
-  }
-
-  Wrap(Wrap<T> &&reference) : m_Data(std::move(reference.m_Data))
-  {
-  }
-
-  Wrap(const Wrap<T> &reference) = delete;
-  Wrap<T> &operator=(const Wrap<T>& reference) = delete;
-
-  const T &data() const
-  {
-    return m_Data;
-  }
-
-private:
-  const T &m_Data;
-};
-
-template <typename T>
-Wrap<T> wrap(const T &data)
-{
-  return Wrap<T>(data);
-}
-
-
-std::ostream &operator<<(std::ostream &os, const Wrap<LPSTR> &str);
-std::ostream &operator<<(std::ostream &os, const Wrap<LPWSTR> &str);
-std::ostream &operator<<(std::ostream &os, const Wrap<LPCSTR> &str);
-std::ostream &operator<<(std::ostream &os, const Wrap<LPCWSTR> &str);
-std::ostream &operator<<(std::ostream &os, const Wrap<std::wstring> &str);
-
-std::ostream &operator<<(std::ostream &os, const Wrap<PUNICODE_STRING> &str);
-std::ostream &operator<<(std::ostream &os, const Wrap<NTSTATUS> &status);
-std::ostream &operator<<(std::ostream &os, const Wrap<DWORD> &value);
-
 spdlog::level::level_enum ConvertLogLevel(LogLevel level);
 LogLevel ConvertLogLevel(spdlog::level::level_enum level);
 
 } // namespace
-
 
 // prefer the short variant of the function name, without signature.
 // Fall back to the portable boost macro

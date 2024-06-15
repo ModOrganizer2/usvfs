@@ -20,7 +20,7 @@ along with usvfs. If not, see <http://www.gnu.org/licenses/>.
 */
 #include "exceptionex.h"
 #include "winapi.h"
-#include <spdlog.h>
+#include <spdlog/spdlog.h>
 
 namespace usvfs::shared
 {

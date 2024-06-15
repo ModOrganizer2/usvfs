@@ -37,7 +37,8 @@ along with usvfs. If not, see <http://www.gnu.org/licenses/>.
 #include <windows_sane.h>
 #include <stringutils.h>
 
-#include <spdlog.h>
+#include <spdlog/spdlog.h>
+#include <spdlog/sinks/stdout_sinks.h>
 
 #include <hookcontext.h>
 #include <unicodestring.h>

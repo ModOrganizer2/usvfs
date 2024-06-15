@@ -6,7 +6,8 @@
 #include <windows_sane.h>
 //#include <boost/thread.hpp>
 #include <boost/filesystem.hpp>
-#include <spdlog.h>
+#include <spdlog/spdlog.h>
+#include <spdlog/sinks/stdout_sinks.h>
 #include <exceptionex.h>
 #include <winapi.h>
 

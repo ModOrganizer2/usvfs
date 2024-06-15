@@ -3,7 +3,8 @@
 #include <boost/type_traits.hpp>
 #include <boost/filesystem.hpp>
 #include <winapi.h>
-#include <spdlog.h>
+#include <spdlog/spdlog.h>
+#include <spdlog/sinks/stdout_sinks.h>
 
 using namespace usvfs::shared;
 using namespace InjectLib;

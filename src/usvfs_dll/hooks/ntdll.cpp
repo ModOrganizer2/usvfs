@@ -10,6 +10,7 @@
 #include <stringcast.h>
 #include <addrtools.h>
 #include <unicodestring.h>
+#include <queue>
 
 namespace ulog = usvfs::log;
 namespace ush  = usvfs::shared;
@@ -443,20 +444,6 @@ int NextDividableBy(int number, int divider)
       * divider);
 }
 
-std::string toHex(PVOID buffer, ULONG size)
-{
-  fmt::MemoryWriter stream;
-  unsigned char *bufferChar = reinterpret_cast<unsigned char *>(buffer);
-  for (size_t i = 0; i < size; ++i) {
-    stream << fmt::pad(fmt::hex(bufferChar[i]), 2, '0');
-    if (i < size - 1) {
-      stream << ((i % 16 == 15) ? "\n" : " ");
-    }
-  }
-
-  return stream.str();
-}
-
 // Something is trying to create a variety of files starting with "\Device\",
 // such as "\Device\DeviceApi\Dev\Query", "\Device\MMCSS\MmThread",
 // "\Device\DeviceApi\CMNotify", etc.
@@ -872,7 +859,7 @@ NTSTATUS WINAPI usvfs::hook_NtQueryDirectoryFile(
     LOG_CALL()
         .addParam("path", ntdllHandleTracker.lookup(FileHandle))
         .PARAM(FileInformationClass)
-        .PARAMWRAP(FileName)
+        .PARAM(FileName)
         .PARAM(numVirtualFiles)
         .PARAMWRAP(res);
   }
@@ -1043,7 +1030,7 @@ NTSTATUS WINAPI usvfs::hook_NtQueryDirectoryFileEx(
     LOG_CALL()
       .addParam("path", ntdllHandleTracker.lookup(FileHandle))
       .PARAM(FileInformationClass)
-      .PARAMWRAP(FileName)
+      .PARAM(FileName)
       .PARAM(QueryFlags)
       .PARAM(numVirtualFiles)
       .PARAMWRAP(res);
@@ -1265,8 +1252,8 @@ NTSTATUS ntdll_mess_NtCreateFile(
 
     if (rerouter.wasRerouted() || rerouter.changedError() || originalDisposition != CreateDisposition) {
       LOG_CALL()
-        .PARAMWRAP(inPathW)
-        .PARAMWRAP(rerouter.fileName())
+        .PARAM(inPathW)
+        .PARAM(rerouter.fileName())
         .PARAMHEX(DesiredAccess)
         .PARAMHEX(originalDisposition)
         .PARAMHEX(CreateDisposition)

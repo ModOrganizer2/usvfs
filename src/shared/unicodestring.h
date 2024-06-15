@@ -23,6 +23,8 @@ along with usvfs. If not, see <http://www.gnu.org/licenses/>.
 #include "windows_sane.h"
 #include "ntdll_declarations.h"
 
+#include "formatters.h"
+
 namespace usvfs
 {
 
@@ -31,8 +33,6 @@ namespace usvfs
  */
 class UnicodeString
 {
-  friend std::ostream &operator<<(std::ostream &os, const UnicodeString &str);
-
 public:
   UnicodeString()
     : m_Buffer(1)
@@ -105,6 +105,9 @@ public:
   UnicodeString &appendPath(PUNICODE_STRING path);
 
 private:
+
+  friend struct ::std::formatter<UnicodeString, char>;
+
   void update();
 
   UNICODE_STRING m_Data;
@@ -112,3 +115,18 @@ private:
 };
 
 } // namespace
+
+template <>
+struct std::formatter<usvfs::UnicodeString, char> : std::formatter<PCUNICODE_STRING, char>
+{
+  template <class FmtContext>
+  FmtContext::iterator format(const usvfs::UnicodeString& v, FmtContext& ctx) const
+  {
+    if (v.size() == 0) {
+      return std::format_to(ctx.out(), "<empty string>");
+    }
+    else {
+      return std::formatter<PCUNICODE_STRING, char>::format(&v.m_Data, ctx);
+    }
+  }
+};

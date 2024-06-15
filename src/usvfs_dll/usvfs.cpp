@@ -29,7 +29,8 @@ along with usvfs. If not, see <http://www.gnu.org/licenses/>.
 #include <ttrampolinepool.h>
 #include <stringcast.h>
 #include <inject.h>
-#include <fmt/bundled/ostream.h>
+#include <spdlog/sinks/stdout_sinks.h>
+#include <spdlog/sinks/null_sink.h>
 
 // note that there's a mix of boost and std filesystem stuff in this file and
 // that they're not completely compatible
@@ -120,20 +121,6 @@ bool shouldAddToInverseTree(std::string_view name)
   return extensionMatchesCI<longestExtension>(name, extensionsLC, extensionsUC);
 }
 
-
-namespace spdlog {
-  namespace sinks {
-    class null_sink : public sink {
-
-    public:
-      null_sink() {}
-      virtual void log(const details::log_msg&) override {}
-      virtual void flush() override {}
-    };
-  }
-}
-
-
 //
 // Logging
 //
@@ -155,7 +142,7 @@ void InitLoggingInternal(bool toConsole, bool connectExistingSHM)
     auto logger = spdlog::get("usvfs");
     if (logger.get() == nullptr) {
       logger = toConsole ? spdlog::create<spdlog::sinks::stdout_sink_mt>("usvfs")
-                         : spdlog::create<spdlog::sinks::shm_sink>("usvfs", "usvfs");
+                         : spdlog::create<usvfs::sinks::shm_sink>("usvfs", "usvfs");
       logger->set_pattern("%H:%M:%S.%e [%L] %v");
     }
     logger->set_level(spdlog::level::debug);
@@ -164,7 +151,7 @@ void InitLoggingInternal(bool toConsole, bool connectExistingSHM)
     logger = spdlog::get("hooks");
     if (logger.get() == nullptr) {
       logger = toConsole ? spdlog::create<spdlog::sinks::stdout_sink_mt>("hooks")
-                         : spdlog::create<spdlog::sinks::shm_sink>("hooks", "usvfs");
+                         : spdlog::create<usvfs::sinks::shm_sink>("hooks", "usvfs");
       logger->set_pattern("%H:%M:%S.%e <%P:%t> [%L] %v");
     }
     logger->set_level(spdlog::level::debug);
@@ -172,10 +159,10 @@ void InitLoggingInternal(bool toConsole, bool connectExistingSHM)
     // TODO should really report this
     //OutputDebugStringA((boost::format("init exception: %1%\n") % e.what()).str().c_str());
     if (spdlog::get("usvfs").get() == nullptr) {
-      spdlog::create<spdlog::sinks::null_sink>("usvfs");
+      spdlog::create<spdlog::sinks::null_sink_mt>("usvfs");
     }
     if (spdlog::get("hooks").get() == nullptr) {
-      spdlog::create<spdlog::sinks::null_sink>("hooks");
+      spdlog::create<spdlog::sinks::null_sink_mt>("hooks");
     }
   }
 
@@ -455,7 +442,7 @@ BOOL WINAPI usvfsConnectVFS(const usvfsParameters* params)
 {
   if (spdlog::get("usvfs").get() == nullptr) {
     // create temporary logger so we don't get null-pointer exceptions
-    spdlog::create<spdlog::sinks::null_sink>("usvfs");
+    spdlog::create<spdlog::sinks::null_sink_mt>("usvfs");
   }
 
   try {
@@ -474,7 +461,7 @@ void WINAPI usvfsDisconnectVFS()
 {
   if (spdlog::get("usvfs").get() == nullptr) {
     // create temporary logger so we don't get null-pointer exceptions
-    spdlog::create<spdlog::sinks::null_sink>("usvfs");
+    spdlog::create<spdlog::sinks::null_sink_mt>("usvfs");
   }
 
   spdlog::get("usvfs")->debug("remove from process {}", GetCurrentProcessId());
@@ -619,7 +606,7 @@ bool assertPathExists(usvfs::RedirectionTreeContainer &table, LPCWSTR path)
             ush::FLAG_DUMMY, false);
         current = newNode.get().get();
       } else {
-        spdlog::get("usvfs")->info("{} doesn't exist", targetPath);
+        spdlog::get("usvfs")->info("{} doesn't exist", targetPath.c_str());
         return false;
       }
     }
