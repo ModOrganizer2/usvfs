@@ -347,8 +347,9 @@ void TestNtApi::write_file(const path& file_path, const void* data, std::size_t 
 
     if (add_new_line)
     {
+      char buffer[] = "\r\n";
       status =
-        NtWriteFile(file, NULL, NULL, NULL, &iosb, "\r\n", 2, NULL, NULL);
+        NtWriteFile(file, NULL, NULL, NULL, &iosb, buffer, 2, NULL, NULL);
       print_result("NtWriteFile", status);
       if (!NT_SUCCESS(status))
         throw test::FuncFailed("NtWriteFile", status);
@@ -369,7 +370,7 @@ void TestNtApi::touch_file(const path& file_path, bool full_write_access)
   GetSystemTime(&st);
   FILETIME ft;
   if (!SystemTimeToFileTime(&st, &ft))
-    throw_testWinFuncFailed("SystemTimeToFileTime");
+    test::throw_testWinFuncFailed("SystemTimeToFileTime");
 
   UNICODE_STRING unicode_path;
   RtlInitUnicodeString(&unicode_path, file_path.c_str());

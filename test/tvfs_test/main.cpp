@@ -269,7 +269,7 @@ TEST_F(USVFSTest, GetFullPathNameOnRegularCurrentDirectory)
 // this function is useful to simulate a CreateFileW by internally using the hook
 // version of NtOpenFile
 //
-HANDLE hooked_NtOpenFile(LPWSTR path, ACCESS_MASK accessMask, ULONG shareAccess, ULONG openOptions)
+HANDLE hooked_NtOpenFile(LPCWSTR path, ACCESS_MASK accessMask, ULONG shareAccess, ULONG openOptions)
 {
   constexpr size_t BUFFER_SIZE = 2048;
   IO_STATUS_BLOCK statusBlock;

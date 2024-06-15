@@ -14,6 +14,8 @@
 #include <iostream>
 #include <cerrno>
 
+using test::throw_testWinFuncFailed;
+
 // usvfs_test_options class:
 
 void usvfs_test_options::fill_defaults(const path& test_name, const std::wstring& scenario, const wchar_t* label)
@@ -104,7 +106,7 @@ public:
 
     errno_t err = _wfopen_s(m_usvfs_log, options.usvfs_log.c_str(), L"wt");
     if (err || !m_usvfs_log)
-      throw_testWinFuncFailed("_wfopen_s", options.usvfs_log.u8string().c_str(), err);
+      throw_testWinFuncFailed("_wfopen_s", options.usvfs_log.string().c_str(), err);
 
     std::wcout << "Connecting VFS..." << std::endl;
 
@@ -158,9 +160,9 @@ public:
 
     for (const auto& map : mappings) {
       const string& source = usvfs_test_base::SOURCE_LABEL +
-        test::path_as_relative(options.source, map.source).u8string();
+        test::path_as_relative(options.source, map.source).string();
       const string& destination = usvfs_test_base::MOUNT_LABEL +
-        test::path_as_relative(options.mount, map.destination).u8string();
+        test::path_as_relative(options.mount, map.destination).string();
       switch (map.type)
       {
       case map_type::dir:
@@ -274,7 +276,7 @@ public:
     test::ScopedFILE map;
     errno_t err = _wfopen_s(map, mapfile.c_str(), L"rt");
     if (err || !map)
-      throw_testWinFuncFailed("_wfopen_s", mapfile.u8string().c_str(), err);
+      throw_testWinFuncFailed("_wfopen_s", mapfile.string().c_str(), err);
 
     mappings_list mappings;
 
@@ -367,7 +369,7 @@ void usvfs_test_base::cleanup_temp()
     if (m_o.force_temp_cleanup)
       delete_file(m_o.temp);
     else
-      throw FuncFailed("cleanup_temp", "temp exists but is a file", m_o.temp.u8string().c_str());
+      throw FuncFailed("cleanup_temp", "temp exists but is a file", m_o.temp.string().c_str());
   }
   else {
     std::vector<wstring> cleanfiles;
@@ -389,9 +391,9 @@ void usvfs_test_base::cleanup_temp()
     if (!cleanfiles.empty() || !cleandirs.empty() || !otherdirs.empty())
     {
       if (!m_o.force_temp_cleanup && !otherdirs.empty())
-        throw FuncFailed("cleanup_temp", "Refusing to clean temp dir with non-mount/source directories (clean manually and rerun)", m_o.temp.u8string().c_str());
+        throw FuncFailed("cleanup_temp", "Refusing to clean temp dir with non-mount/source directories (clean manually and rerun)", m_o.temp.string().c_str());
       if (!m_o.force_temp_cleanup && cleandirs.empty() && !output_file)
-        throw FuncFailed("cleanup_temp", "Refusing to clean temp dir with no directories and no output log (clean manually and rerun)", m_o.temp.u8string().c_str());
+        throw FuncFailed("cleanup_temp", "Refusing to clean temp dir with no directories and no output log (clean manually and rerun)", m_o.temp.string().c_str());
       std::wcout << "Cleaning previous temp dir: " << m_o.temp.c_str() << std::endl;
       for (auto f : cleanfiles)
         delete_file(m_o.temp / f);
@@ -413,13 +415,13 @@ void usvfs_test_base::copy_fixture()
 
   bool isDir = false;
   if (!fileExists(fmount.c_str(), &isDir) || !isDir)
-    throw FuncFailed("copy_fixture", "fixtures dir does not exist", fmount.u8string().c_str());
+    throw FuncFailed("copy_fixture", "fixtures dir does not exist", fmount.string().c_str());
   if (!fileExists(fsource.c_str(), &isDir) || !isDir)
-    throw FuncFailed("copy_fixture", "fixtures dir does not exist", fsource.u8string().c_str());
+    throw FuncFailed("copy_fixture", "fixtures dir does not exist", fsource.string().c_str());
   if (fileExists(m_o.mount.c_str(), &isDir))
-    throw FuncFailed("copy_fixture", "source dir already exists", m_o.mount.u8string().c_str());
+    throw FuncFailed("copy_fixture", "source dir already exists", m_o.mount.string().c_str());
   if (fileExists(m_o.source.c_str(), &isDir))
-    throw FuncFailed("copy_fixture", "source dir already exists", m_o.source.u8string().c_str());
+    throw FuncFailed("copy_fixture", "source dir already exists", m_o.source.string().c_str());
 
   std::wcout << "Copying fixture: " << m_o.fixture << std::endl;
   recursive_copy_files(fmount, m_o.mount, false);
@@ -448,25 +450,25 @@ bool usvfs_test_base::postmortem_check()
       return false;
     }
     if (!winapi::ex::wide::fileExists((m_o.fixture / mount_gold).c_str(), &is_dir) || !is_dir) {
-      fprintf(log, "  ERROR: fixtures golden mount does not exist: %s\n", mount_gold.u8string().c_str());
+      fprintf(log, "  ERROR: fixtures golden mount does not exist: %s\n", mount_gold.string().c_str());
       return false;
     }
     if (!winapi::ex::wide::fileExists((m_o.fixture / source_gold).c_str(), &is_dir) || !is_dir) {
-      fprintf(log, "  ERROR: fixtures golden source does not exist: %s\n", mount_gold.u8string().c_str());
+      fprintf(log, "  ERROR: fixtures golden source does not exist: %s\n", mount_gold.string().c_str());
       return false;
     }
     if (!winapi::ex::wide::fileExists(gold_output.c_str(), &is_dir) || is_dir) {
-      fprintf(log, "  ERROR: golden scenario output does not exist: %s\n", gold_output.filename().u8string().c_str());
+      fprintf(log, "  ERROR: golden scenario output does not exist: %s\n", gold_output.filename().string().c_str());
       return false;
     }
 
     fprintf(log, "postmortem check of %s against golden %s...\n",
-      m_o.mount.filename().u8string().c_str(), mount_gold.u8string().c_str());
+      m_o.mount.filename().string().c_str(), mount_gold.string().c_str());
     bool mount_check =
       recursive_compare_dirs(path(), m_o.fixture / mount_gold, m_o.mount, log);
 
     fprintf(log, "postmortem check of %s against golden %s...\n",
-      m_o.source.filename().u8string().c_str(), source_gold.u8string().c_str());
+      m_o.source.filename().string().c_str(), source_gold.string().c_str());
     bool source_check =
       recursive_compare_dirs(path(), m_o.fixture / source_gold, m_o.source, log);
 
@@ -485,7 +487,7 @@ bool usvfs_test_base::postmortem_check()
   // I am not sure this is still relevant
   // 
   //if (!test::compare_files(gold_output, m_o.output, false)) {
-  //  fprintf(output(), "ERROR: output does not match gold output: %s\n", m_o.output.filename().u8string().c_str());
+  //  fprintf(output(), "ERROR: output does not match gold output: %s\n", m_o.output.filename().string().c_str());
   //  return false;
   //}
 
@@ -523,7 +525,7 @@ bool usvfs_test_base::recursive_compare_dirs(path rel_path, path gold_base, path
         recurse.push_back(f.fileName);
       }
       else {
-        fprintf(log, "  unexpected directory found: %s%s\n", MOUNT_LABEL, (rel_path / f.fileName).u8string().c_str());
+        fprintf(log, "  unexpected directory found: %s%s\n", MOUNT_LABEL, (rel_path / f.fileName).string().c_str());
         all_good = false;
       }
     }
@@ -533,24 +535,24 @@ bool usvfs_test_base::recursive_compare_dirs(path rel_path, path gold_base, path
         gold_files.erase(find);
         if (!test::compare_files(gold_full / f.fileName, result_full / f.fileName, false))
         {
-          fprintf(log, "  file contents differs: %s%s\n", MOUNT_LABEL, (rel_path / f.fileName).u8string().c_str());
+          fprintf(log, "  file contents differs: %s%s\n", MOUNT_LABEL, (rel_path / f.fileName).string().c_str());
           all_good = false;
         }
       }
       else {
-        fprintf(log, "  unexpected file found: %s%s\n", MOUNT_LABEL, (rel_path / f.fileName).u8string().c_str());
+        fprintf(log, "  unexpected file found: %s%s\n", MOUNT_LABEL, (rel_path / f.fileName).string().c_str());
         all_good = false;
       }
     }
   }
 
   for (auto d : gold_dirs) {
-    fprintf(log, "  expected directory not found: %s%s\n", MOUNT_LABEL, (rel_path / d).u8string().c_str());
+    fprintf(log, "  expected directory not found: %s%s\n", MOUNT_LABEL, (rel_path / d).string().c_str());
     all_good = false;
   }
 
   for (auto f : gold_files) {
-    fprintf(log, "  expected file not found: %s%s\n", MOUNT_LABEL, (rel_path / f).u8string().c_str());
+    fprintf(log, "  expected file not found: %s%s\n", MOUNT_LABEL, (rel_path / f).string().c_str());
     all_good = false;
   }
 
@@ -565,7 +567,7 @@ test::ScopedFILE usvfs_test_base::output()
   test::ScopedFILE log;
   errno_t err = _wfopen_s(log, m_o.output.c_str(), m_clean_output ? L"wt" : L"at");
   if (err || !log)
-    throw_testWinFuncFailed("_wfopen_s", m_o.output.u8string().c_str(), err);
+    throw_testWinFuncFailed("_wfopen_s", m_o.output.string().c_str(), err);
   m_clean_output = false;
   return log;
 }
@@ -581,7 +583,7 @@ void usvfs_test_base::clean_output()
     return;
   }
   else if (err || !in)
-    throw_testWinFuncFailed("_wfopen_s", m_o.output.u8string().c_str(), err);
+    throw_testWinFuncFailed("_wfopen_s", m_o.output.string().c_str(), err);
 
   test::ScopedFILE out;
   path clean = m_o.output.parent_path() / m_o.output.stem();
@@ -589,7 +591,7 @@ void usvfs_test_base::clean_output()
   clean += m_o.output.extension();
   err = _wfopen_s(out, clean.c_str(), L"wt");
   if (err || !in)
-    throw_testWinFuncFailed("_wfopen_s", clean.u8string().c_str(), err);
+    throw_testWinFuncFailed("_wfopen_s", clean.string().c_str(), err);
 
   wcout << L"Cleaning " << m_o.output << " to " << clean << endl;
 
@@ -741,7 +743,7 @@ void usvfs_test_base::log_settings(const std::wstring& exe_name)
   using namespace usvfs::shared;
   fprintf(output(), "%s %s started with %s%s%s\n\n",
     string_cast<std::string>(exe_name).c_str(), scenario_name(),
-    m_o.opsexe.filename().u8string().c_str(),
+    m_o.opsexe.filename().string().c_str(),
     m_o.ops_options.empty() ? "" : " ", string_cast<std::string>(m_o.ops_options).c_str());
 }
 
@@ -815,7 +817,7 @@ void usvfs_test_base::run_ops(bool should_succeed, const wstring& preargs, const
   using string = std::string;
   using wstring = wstring;
 
-  string commandlog = test::path(m_o.opsexe).filename().u8string();
+  string commandlog = test::path(m_o.opsexe).filename().string();
   wstring commandline = m_o.opsexe;
   if (commandline.find(' ') != wstring::npos && commandline.find('"') == wstring::npos) {
     commandline = L"\"" + commandline + L"\"";
@@ -827,7 +829,7 @@ void usvfs_test_base::run_ops(bool should_succeed, const wstring& preargs, const
     commandline += L" -basedir ";
     commandline += m_o.mount;
     commandlog += " -basedir ";
-    commandlog += m_o.mount.filename().u8string();
+    commandlog += m_o.mount.filename().string();
   }
 
   if (!m_o.ops_options.empty()) {
@@ -840,7 +842,7 @@ void usvfs_test_base::run_ops(bool should_succeed, const wstring& preargs, const
   commandline += L" -cout+ ";
   commandline += m_o.output;
   commandlog += " -cout+ ";
-  commandlog += m_o.output.filename().u8string();
+  commandlog += m_o.output.filename().string();
 
   if (!additional_args.empty()) {
     commandline += L" ";
@@ -860,14 +862,14 @@ void usvfs_test_base::run_ops(bool should_succeed, const wstring& preargs, const
     commandline += L" ";
     commandline += m_o.mount / rel_path;
     commandlog += " ";
-    commandlog += MOUNT_LABEL + rel_path.u8string();
+    commandlog += MOUNT_LABEL + rel_path.string();
   }
 
   if (!rel_path2.empty()) {
     commandline += L" ";
     commandline += m_o.mount / rel_path2;
     commandlog += " ";
-    commandlog += MOUNT_LABEL + rel_path2.u8string();
+    commandlog += MOUNT_LABEL + rel_path2.string();
   }
 
   if (!postargs.empty()) {
@@ -905,7 +907,7 @@ void usvfs_test_base::verify_mount_contents(const path& rel_path, const char* co
   verify_mount_existance(rel_path);
   if (verify_contents(m_o.mount / rel_path, contents))
     throw test::FuncFailed("verify_mount_contents",
-      (MOUNT_LABEL + rel_path.u8string()).c_str(), contents);
+      (MOUNT_LABEL + rel_path.string()).c_str(), contents);
 }
 
 void usvfs_test_base::verify_source_contents(const path& rel_path, const char* contents)
@@ -913,7 +915,7 @@ void usvfs_test_base::verify_source_contents(const path& rel_path, const char* c
   verify_source_existance(rel_path);
   if (verify_contents(m_o.source / rel_path, contents))
     throw test::FuncFailed("verify_source_contents",
-    (SOURCE_LABEL + rel_path.u8string()).c_str(), contents);
+    (SOURCE_LABEL + rel_path.string()).c_str(), contents);
 }
 
 bool usvfs_test_base::verify_contents(const path& file, const char* contents)
@@ -938,11 +940,11 @@ void usvfs_test_base::verify_mount_existance(const path& rel_path, bool exists, 
   if (exists != real_exists)
     throw test::FuncFailed("verify_mount_existance",
       real_exists ? "path exists" : "path does not exist",
-      (MOUNT_LABEL + rel_path.u8string()).c_str());
+      (MOUNT_LABEL + rel_path.string()).c_str());
   else if (real_exists && is_dir != real_is_dir)
     throw test::FuncFailed("verify_mount_existance",
       real_is_dir ? "path is a directory" : "path is a file",
-      (MOUNT_LABEL + rel_path.u8string()).c_str());
+      (MOUNT_LABEL + rel_path.string()).c_str());
 }
 
 void usvfs_test_base::verify_source_existance(const path& rel_path, bool exists, bool is_dir)
@@ -953,9 +955,9 @@ void usvfs_test_base::verify_source_existance(const path& rel_path, bool exists,
   if (exists != real_exists)
     throw test::FuncFailed("verify_source_existance",
       real_exists ? "path exists" : "path does not exist",
-      (SOURCE_LABEL + rel_path.u8string()).c_str());
+      (SOURCE_LABEL + rel_path.string()).c_str());
   else if (real_exists && is_dir != real_is_dir)
     throw test::FuncFailed("verify_source_existance",
       real_is_dir ? "path is a directory" : "path is a file",
-      (SOURCE_LABEL + rel_path.u8string()).c_str());
+      (SOURCE_LABEL + rel_path.string()).c_str());
 }

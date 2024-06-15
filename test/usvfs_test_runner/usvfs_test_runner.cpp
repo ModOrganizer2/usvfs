@@ -8,7 +8,7 @@
 static std::string usvfs_test_command(const char* scenario, const char* platform, const char* testflag = nullptr, const char* opsarg = nullptr)
 {
   using namespace test;
-  std::string command = path_of_test_bin(platform_dependant_executable("usvfs_test", "exe", platform)).u8string();
+  std::string command = path_of_test_bin(platform_dependant_executable("usvfs_test", "exe", platform)).string();
   if (testflag) {
     command += " -";
     command += testflag;
@@ -34,14 +34,14 @@ static std::string usvfs_test_command(const char* scenario, const char* platform
   return command;
 }
 
-static DWORD spawn(std::string& commandline)
+static DWORD spawn(std::string commandline)
 {
   STARTUPINFOA si{ 0 };
   si.cb = sizeof(si);
   PROCESS_INFORMATION pi{ 0 };
 
   std::cout << "Running: [" << commandline << "]" << std::endl;
-  if (!CreateProcessA(NULL, &commandline[0], NULL, NULL, FALSE, 0, NULL, NULL, &si, &pi)) {
+  if (!CreateProcessA(NULL, commandline.data(), NULL, NULL, FALSE, 0, NULL, NULL, &si, &pi)) {
     DWORD gle = GetLastError();
     std::cerr << "CreateProcess failed error=" << gle << std::endl;
     return 98;

@@ -1,6 +1,5 @@
 #include <cstdio>
 #include <stdexcept>
-#include <fmt/format.h>
 
 #include <boost/type_traits.hpp>
 #include <boost/filesystem.hpp>
@@ -58,7 +57,7 @@ public:
     : m_output(stdout)
     , m_api(&w32api)
   {
-    set_basedir(TestFileSystem::current_directory().u8string().c_str());
+    set_basedir(TestFileSystem::current_directory().string().c_str());
   }
 
   ~CommandExecuter()
@@ -90,7 +89,7 @@ public:
     m_output = nullptr;
     errno_t err = fopen_s(&m_output, output_file, append ? "at" : "wt");
     if (err || !m_output)
-      throw_testWinFuncFailed("fopen_s", output_file, err);
+      test::throw_testWinFuncFailed("fopen_s", output_file, err);
     else {
       if (m_cleanoutput)
         fprintf(m_output, "#> Output log openned for: %s\n", clean_cmdline_heuristic(cmdline).c_str());
@@ -213,7 +212,7 @@ public:
     std::vector<TestFileSystem::path> recurse;
     {
       auto files = m_api->list_directory(real);
-      fprintf(m_output, ">> Listing directory {%s}:\n", m_api->relative_path(real).u8string().c_str());
+      fprintf(m_output, ">> Listing directory {%s}:\n", m_api->relative_path(real).string().c_str());
       for (auto f : files) {
         if (f.is_dir()) {
           fprintf(m_output, "[%s] DIR (attributes 0x%x)\n",
@@ -243,7 +242,7 @@ private:
     }
     catch (const std::exception& e) {
       fmt::MemoryWriter msg;
-      msg << "Failed to create_path [" << m_api->relative_path(real.parent_path()).u8string() << "] : " << e.what();
+      msg << "Failed to create_path [" << m_api->relative_path(real.parent_path()).string() << "] : " << e.what();
       throw std::runtime_error(msg.str());
     }
     return std::move(real);
@@ -328,7 +327,7 @@ int main(int argc, char *argv[])
   CommandExecuter executer;
 
   TestFileSystem::path exe_path = argv[0];
-  std::string exename = exe_path.filename().u8string();
+  std::string exename = exe_path.filename().string();
   std::string cmdline = exename + " " + UntouchedCommandLineArguments();
   fprintf(stdout, "#> process %d started with commandline: %s\n", GetCurrentProcessId(), cmdline.c_str());
 

@@ -4,6 +4,8 @@
 #define WIN32_LEAN_AND_MEAN
 #include <Windows.h>
 
+using test::throw_testWinFuncFailed;
+
 bool TestFileSystem::FileInformation::is_dir() const
 {
   return (attributes & FILE_ATTRIBUTE_DIRECTORY) != 0;
@@ -68,13 +70,13 @@ const char* TestFileSystem::rename_operation_name(bool replace_existing, bool al
 void TestFileSystem::print_operation(const char* operation, const path& target)
 {
   if (m_output)
-    fprintf(m_output, "# (%s) %s {%s}\n", id(), operation, relative_path(target).u8string().c_str());
+    fprintf(m_output, "# (%s) %s {%s}\n", id(), operation, relative_path(target).string().c_str());
 }
 
 void TestFileSystem::print_operation(const char* operation, const path& source, const path& target)
 {
   if (m_output)
-    fprintf(m_output, "# (%s) %s {%s} {%s}\n", id(), operation, relative_path(source).u8string().c_str(), relative_path(target).u8string().c_str());
+    fprintf(m_output, "# (%s) %s {%s} {%s}\n", id(), operation, relative_path(source).string().c_str(), relative_path(target).string().c_str());
 }
 
 static inline void print_op_with_result(FILE* output, const char* prefix, const char* operation, const uint32_t* result, DWORD* last_error, const char* opt_arg)
