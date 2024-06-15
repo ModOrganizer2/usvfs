@@ -137,18 +137,6 @@ namespace spdlog {
 // Logging
 //
 
-char *SeverityShort(LogLevel lvl)
-{
-  switch (lvl) {
-    case LogLevel::Debug:   return "D";
-    case LogLevel::Info:    return "I";
-    case LogLevel::Warning: return "W";
-    case LogLevel::Error:   return "E";
-    default: return "?";
-  }
-}
-
-
 void InitLoggingInternal(bool toConsole, bool connectExistingSHM)
 {
   try {

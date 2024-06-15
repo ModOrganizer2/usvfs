@@ -142,7 +142,7 @@ public:
 
   void blacklistExecutable(const std::wstring &executableName);
   void clearExecutableBlacklist();
-  BOOL HookContext::executableBlacklisted(LPCWSTR lpApplicationName, LPCWSTR lpCommandLine) const;
+  BOOL executableBlacklisted(LPCWSTR lpApplicationName, LPCWSTR lpCommandLine) const;
 
   void addSkipFileSuffix(const std::wstring& fileSuffix);
   void clearSkipFileSuffixes();

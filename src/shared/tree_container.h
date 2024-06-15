@@ -267,7 +267,7 @@ private:
 
     return manager->construct<TreeT>(bi::anonymous_instance)(
       name, flags, TreeT::NodePtrT(),
-      createData<TreeT::DataT, T>(data, allocator), manager);
+      createData<typename TreeT::DataT, T>(data, allocator), manager);
   }
 
   typename TreeT::NodePtrT createSubPtr(TreeT *subNode)
@@ -294,7 +294,7 @@ private:
         base->set(StringT(path.current(), allocator), newNode);
         return newNode;
       } else if (overwrite) {
-        newNode->m_Data = createData<TreeT::DataT, T>(data, allocator);
+        newNode->m_Data = createData<typename TreeT::DataT, T>(data, allocator);
         newNode->m_Flags = static_cast<usvfs::shared::TreeFlags>(flags);
         return newNode;
       } else {
