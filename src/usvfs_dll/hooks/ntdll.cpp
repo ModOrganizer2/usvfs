@@ -372,6 +372,10 @@ void SetInfoFilename(LPVOID address, FILE_INFORMATION_CLASS infoClass,
                      const std::wstring &fileName)
 {
   switch (infoClass) {
+    case FileAllInformation: {
+      SetInfoFilenameImpl(
+        &reinterpret_cast<FILE_ALL_INFORMATION*>(address)->NameInformation, fileName);
+    } break;
     case FileBothDirectoryInformation: {
       SetInfoFilenameImplSN(
           reinterpret_cast<FILE_BOTH_DIR_INFORMATION *>(address), fileName);
@@ -380,9 +384,17 @@ void SetInfoFilename(LPVOID address, FILE_INFORMATION_CLASS infoClass,
       SetInfoFilenameImpl(
           reinterpret_cast<FILE_DIRECTORY_INFORMATION *>(address), fileName);
     } break;
+    case FileNameInformation: {
+      SetInfoFilenameImpl(
+        reinterpret_cast<FILE_NAME_INFORMATION*>(address), fileName);
+    } break;
     case FileNamesInformation: {
-      SetInfoFilenameImpl(reinterpret_cast<FILE_NAMES_INFORMATION *>(address),
-                          fileName);
+      SetInfoFilenameImpl(
+        reinterpret_cast<FILE_NAMES_INFORMATION *>(address), fileName);
+    } break;
+    case FileNormalizedNameInformation: {
+      SetInfoFilenameImpl(
+        reinterpret_cast<FILE_NAME_INFORMATION*>(address), fileName);
     } break;
     case FileIdFullDirectoryInformation: {
       SetInfoFilenameImpl(
@@ -394,8 +406,7 @@ void SetInfoFilename(LPVOID address, FILE_INFORMATION_CLASS infoClass,
     } break;
     case FileIdBothDirectoryInformation: {
       SetInfoFilenameImplSN(
-          reinterpret_cast<FILE_ID_BOTH_DIR_INFORMATION *>(address),
-          fileName);
+          reinterpret_cast<FILE_ID_BOTH_DIR_INFORMATION *>(address), fileName);
     } break;
     default: {
       // NOP
@@ -1034,6 +1045,83 @@ NTSTATUS WINAPI usvfs::hook_NtQueryDirectoryFileEx(
       .PARAM(QueryFlags)
       .PARAM(numVirtualFiles)
       .PARAMWRAP(res);
+  }
+
+  HOOK_END
+  return res;
+}
+
+DLLEXPORT NTSTATUS WINAPI usvfs::hook_NtQueryObject(
+  HANDLE Handle, OBJECT_INFORMATION_CLASS ObjectInformationClass,
+  PVOID ObjectInformation, ULONG ObjectInformationLength, PULONG ReturnLength)
+{
+  NTSTATUS res;
+
+  HOOK_START_GROUP(MutExHookGroup::FILE_ATTRIBUTES)
+  if (!callContext.active()) {
+    return ::NtQueryObject(Handle, ObjectInformationClass, ObjectInformation,
+      ObjectInformationLength, ReturnLength);
+  }
+
+  PRE_REALCALL
+  res = ::NtQueryObject(Handle, ObjectInformationClass, ObjectInformation,
+                        ObjectInformationLength, ReturnLength);
+  POST_REALCALL
+
+  LOG_CALL()
+    .addParam("path", ntdllHandleTracker.lookup(Handle))
+    .PARAM(ObjectInformationClass);
+
+  HOOK_END
+  return res;
+}
+
+DLLEXPORT NTSTATUS WINAPI usvfs::hook_NtQueryInformationFile(
+  HANDLE FileHandle, PIO_STATUS_BLOCK IoStatusBlock, PVOID FileInformation,
+  ULONG Length, FILE_INFORMATION_CLASS FileInformationClass)
+{
+  NTSTATUS res;
+
+  HOOK_START_GROUP(MutExHookGroup::FILE_ATTRIBUTES)
+  if (!callContext.active()) {
+    return ::NtQueryInformationFile(FileHandle, IoStatusBlock, FileInformation, 
+      Length, FileInformationClass);
+  }
+
+  PRE_REALCALL
+  res = ::NtQueryInformationFile(FileHandle, IoStatusBlock, FileInformation, Length,
+                                 FileInformationClass);
+  POST_REALCALL
+
+  if (res == STATUS_SUCCESS && (
+    FileInformationClass == FileNameInformation 
+    || FileInformationClass == FileAllInformation 
+    || FileInformationClass == FileNormalizedNameInformation)) {
+
+    const auto trackerInfo = ntdllHandleTracker.lookup(FileHandle);
+    const auto redir = applyReroute(READ_CONTEXT(), callContext, trackerInfo);
+
+    // TODO: difference between FileNameInformation and FileNormalizedNameInformation
+
+    FILE_NAME_INFORMATION *info;
+    if (FileInformationClass == FileAllInformation) {
+      info = &reinterpret_cast<FILE_ALL_INFORMATION*>(FileInformation)->NameInformation;
+    } else {
+      info = reinterpret_cast<FILE_NAME_INFORMATION*>(FileInformation);
+    }
+
+    if (redir.redirected)
+    {
+      SetInfoFilename(FileInformation, FileInformationClass, static_cast<LPCWSTR>(redir.path));
+    };
+
+    LOG_CALL()
+      .addParam("tracker_path", trackerInfo)
+      .PARAM(FileInformationClass)
+      .PARAM(redir.redirected)
+      .PARAM(redir.path)
+      .addParam("name_info", std::wstring{info->FileName, info->FileNameLength});
+
   }
 
   HOOK_END
