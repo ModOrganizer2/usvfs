@@ -18,20 +18,25 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with usvfs. If not, see <http://www.gnu.org/licenses/>.
 */
-#include "pch.h"
-#include "inject.h"
-#include "usvfsparametersprivate.h"
-#include <winapi.h>
-#include <exceptionex.h>
-#include <loghelpers.h>
-#include <spdlog.h>
-#include <boost/filesystem.hpp>
-#include <injectlib.h>
-#include <stringutils.h>
-#include <stringcast.h>
 #include <string>
 #include <utility>
 
+#include <spdlog.h>
+
+// TODO: find a better than fetching the bundled fmt from spdlog
+#include <fmt/bundled/ostream.h>
+
+#include <boost/filesystem.hpp>
+
+#include <pch.h>
+#include <inject.h>
+#include <usvfsparametersprivate.h>
+#include <winapi.h>
+#include <exceptionex.h>
+#include <loghelpers.h>
+#include <injectlib.h>
+#include <stringutils.h>
+#include <stringcast.h>
 
 namespace ush = usvfs::shared;
 
