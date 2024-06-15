@@ -29,6 +29,7 @@ along with usvfs. If not, see <http://www.gnu.org/licenses/>.
 #include <ttrampolinepool.h>
 #include <stringcast.h>
 #include <inject.h>
+#include <fmt/bundled/ostream.h>
 
 // note that there's a mix of boost and std filesystem stuff in this file and
 // that they're not completely compatible

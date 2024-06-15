@@ -1,5 +1,6 @@
 #include "kernel32.h"
 #include "sharedids.h"
+#include <fmt/bundled/ostream.h>
 #include <loghelpers.h>
 #include "../hookmanager.h"
 #include "../hookcontext.h"
