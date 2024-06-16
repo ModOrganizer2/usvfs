@@ -169,8 +169,9 @@ private:
 class usvfs_test_runner
 {
 public:
-  usvfs_test_runner(std::wstring_view test_group)
-      : m_group{test_group}, m_temporary_folder{test::path_of_test_temp()}
+  usvfs_test_runner(std::wstring_view test_group, bool overwrite = true)
+      : m_group{test_group}, m_temporary_folder{test::path_of_test_temp()},
+        m_overwrite{overwrite}
   {}
   ~usvfs_test_runner() { cleanup(); }
 
@@ -204,6 +205,9 @@ private:
 
   // path to the folder containing temporary files
   std::filesystem::path m_temporary_folder;
+
+  // use an overwrite folder or not
+  bool m_overwrite;
 };
 
 void usvfs_test_runner::cleanup() const
@@ -222,6 +226,11 @@ void usvfs_test_runner::prepare_filesystem() const
   const auto fixtures = path_to_usvfs_global_test_figures(m_group) / "source";
   if (exists(fixtures)) {
     copy(fixtures, m_temporary_folder, std::filesystem::copy_options::recursive);
+  }
+
+  const auto overwrite = m_temporary_folder / L"overwrite";
+  if (m_overwrite && !exists(overwrite)) {
+    create_directory(overwrite);
   }
 }
 
@@ -309,7 +318,7 @@ int usvfs_test_runner::run() const
 
 TEST(BasicTest, Test)
 {
-  ASSERT_EQ(0, usvfs_test_runner(L"BasicTest").run());
+  ASSERT_EQ(0, usvfs_test_runner(L"BasicTest", false).run());
 }
 
 TEST(RedFileSystemTest, Test)
