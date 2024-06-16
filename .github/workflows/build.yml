@@ -140,6 +140,8 @@ jobs:
         if: always()
       - run: ./test/bin/usvfs_test_runner_${{ matrix.arch }}.exe
         if: always()
+      - run: ./test/bin/usvfs_global_test_runner_${{ matrix.arch }}.exe
+        if: always()
       - uses: actions/upload-artifact@master
         if: always()
         with:
