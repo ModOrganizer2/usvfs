@@ -11,11 +11,15 @@
   <ItemDefinitionGroup>
     <ClCompile>
       <AdditionalIncludeDirectories>%(AdditionalIncludeDirectories);$(GTEST_PATH)\googletest\include</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>UNITTEST;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <LanguageStandard>stdcpp17</LanguageStandard>
+      <PreprocessorDefinitions>USVFS_BUILD_TESTS;UNITTEST;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
     <Link>
-      <AdditionalLibraryDirectories>%(AdditionalLibraryDirectories);$(GTEST_PATH)\build$(PLATFORM_32)\lib</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories Condition="'$(Configuration)'=='ReleaseTest'">
+        %(AdditionalLibraryDirectories);$(GTEST_LIBDIR);$(GTEST_PATH)\build\$(Platform)\Release\lib
+      </AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories Condition="'$(Configuration)'=='DebugTest'">
+        %(AdditionalLibraryDirectories);$(GTEST_LIBDIR);$(GTEST_PATH)\build\$(Platform)\Debug\lib
+      </AdditionalLibraryDirectories>
       <AdditionalDependencies>gtest.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
