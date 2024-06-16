@@ -19,6 +19,7 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="..\test\usvfs_global_test_runner\usvfs_global_test_fixture.cpp" />
     <ClCompile Include="..\test\usvfs_global_test_runner\usvfs_global_test_runner.cpp" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
@@ -103,6 +104,10 @@
     <ProjectReference Include="usvfs_global_test.vcxproj">
       <Project>{4a355317-3634-4c98-afb1-8ba718d54727}</Project>
     </ProjectReference>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\test\usvfs_global_test_runner\gtest_utils.h" />
+    <ClInclude Include="..\test\usvfs_global_test_runner\usvfs_global_test_fixture.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
