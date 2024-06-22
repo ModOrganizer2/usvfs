@@ -15,6 +15,9 @@
     <ClCompile Include="..\test\usvfs_global_test_runner\usvfs_global_test_fixture.cpp">
       <Filter>src</Filter>
     </ClCompile>
+    <ClCompile Include="..\test\usvfs_global_test_runner\gtest_utils.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\test\usvfs_global_test_runner\gtest_utils.h">

@@ -5,10 +5,21 @@
       <UniqueIdentifier>{4FC737F1-C7A5-4376-A066-2A32D752A2FF}</UniqueIdentifier>
       <Extensions>cpp;c;cc;cxx;c++;cppm;ixx;def;odl;idl;hpj;bat;asm;asmx</Extensions>
     </Filter>
+    <Filter Include="inc">
+      <UniqueIdentifier>{7d4fa8c9-4c03-4eaf-82d9-2d53fc06540a}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\test\usvfs_global_test\usvfs_global_test.cpp">
       <Filter>src</Filter>
     </ClCompile>
+    <ClCompile Include="..\test\usvfs_global_test_runner\gtest_utils.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\test\usvfs_global_test_runner\gtest_utils.h">
+      <Filter>inc</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>

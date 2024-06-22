@@ -20,6 +20,10 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\test\usvfs_global_test\usvfs_global_test.cpp" />
+    <ClCompile Include="..\test\usvfs_global_test_runner\gtest_utils.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\test\usvfs_global_test_runner\gtest_utils.h" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <VCProjectVersion>17.0</VCProjectVersion>

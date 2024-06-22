@@ -13,7 +13,6 @@ public:
   void SetUp() override
   {
     PrepareFileSystem();
-    PreapreMapping();
   }
 
   void TearDown() override { CleanUp(); }
@@ -55,7 +54,7 @@ private:
 
   // prepare mapping using the given set of paths
   //
-  void PreapreMapping() const;
+  void PrepareMapping() const;
 
   // cleanup the temporary path
   //
