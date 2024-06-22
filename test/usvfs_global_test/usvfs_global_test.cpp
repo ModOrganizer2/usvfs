@@ -5,6 +5,9 @@
 
 #include "../usvfs_global_test_runner/gtest_utils.h"
 
+// anonymous class that allow tests to access parameters (currently only where the
+// virtualized data folder is)
+//
 class
 {
   bool initialize(int argc, char* argv[])
@@ -54,6 +57,8 @@ TEST(BasicTest, SimpleTest)
   ASSERT_FALSE(exists(data / "info.txt"));
 }
 
+// see https://github.com/ModOrganizer2/modorganizer/issues/2039 for context
+//
 TEST(RedFileSystemTest, RedFileSystemTest)
 {
   const auto data = parameters.data();
@@ -63,9 +68,15 @@ TEST(RedFileSystemTest, RedFileSystemTest)
 
   ASSERT_TRUE(exists(hudpainter_path / "DEFAULT.json"));
 
+  // TEST.json does not exist, so will be created in overwrite - this mainly check that
+  // weakly_canonical returns the path under data/ and not the actual path under
+  // overwrite/
+  //
+  // this relies on the hook for NtQueryInformationFile
+  //
+  ASSERT_FALSE(exists(hudpainter_path / "TEST.json"));
   ASSERT_EQ(hudpainter_path / "TEST.json",
             weakly_canonical(hudpainter_path / "TEST.json"));
-
   write_content(hudpainter_path / "TEST.json", "{}");
 }
 
