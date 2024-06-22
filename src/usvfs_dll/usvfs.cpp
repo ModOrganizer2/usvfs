@@ -869,7 +869,7 @@ BOOL WINAPI usvfsCreateVFSDump(LPSTR buffer, size_t *size)
 }
 
 
-VOID WINAPI usvfsBlacklistExecutable(LPWSTR executableName)
+VOID WINAPI usvfsBlacklistExecutable(LPCWSTR executableName)
 {
   context->blacklistExecutable(executableName);
 }
@@ -881,7 +881,7 @@ VOID WINAPI usvfsClearExecutableBlacklist()
 }
 
 
-VOID WINAPI usvfsAddSkipFileSuffix(LPWSTR fileSuffix)
+VOID WINAPI usvfsAddSkipFileSuffix(LPCWSTR fileSuffix)
 {
   context->addSkipFileSuffix(fileSuffix);
 }
@@ -893,7 +893,7 @@ VOID WINAPI usvfsClearSkipFileSuffixes()
 }
 
 
-VOID WINAPI usvfsAddSkipDirectory(LPWSTR directory)
+VOID WINAPI usvfsAddSkipDirectory(LPCWSTR directory)
 {
   context->addSkipDirectory(directory);
 }
@@ -905,7 +905,7 @@ VOID WINAPI usvfsClearSkipDirectories()
 }
 
 
-VOID WINAPI usvfsForceLoadLibrary(LPWSTR processName, LPWSTR libraryPath)
+VOID WINAPI usvfsForceLoadLibrary(LPCWSTR processName, LPCWSTR libraryPath)
 {
   context->forceLoadLibrary(processName, libraryPath);
 }

@@ -144,7 +144,7 @@ DLLEXPORT BOOL WINAPI usvfsCreateVFSDump(LPSTR buffer, size_t *size);
  * file system
  * @param executableName  name of the executable
  */
-DLLEXPORT VOID WINAPI usvfsBlacklistExecutable(LPWSTR executableName);
+DLLEXPORT VOID WINAPI usvfsBlacklistExecutable(LPCWSTR executableName);
 
 /**
  * clears the executable blacklist
@@ -157,7 +157,7 @@ DLLEXPORT VOID WINAPI usvfsClearExecutableBlacklist();
  * not to be confused with file extensions
  * @param fileSuffix  a valid file suffix
  */
-DLLEXPORT VOID WINAPI usvfsAddSkipFileSuffix(LPWSTR fileSuffix);
+DLLEXPORT VOID WINAPI usvfsAddSkipFileSuffix(LPCWSTR fileSuffix);
 
 /**
  * clears the file suffix skip-list
@@ -172,7 +172,7 @@ DLLEXPORT VOID WINAPI usvfsClearSkipFileSuffixes();
  * will have the .git directory skipped during directory linking
  * @param directory  name of the directory
  */
-DLLEXPORT VOID WINAPI usvfsAddSkipDirectory(LPWSTR directory);
+DLLEXPORT VOID WINAPI usvfsAddSkipDirectory(LPCWSTR directory);
 
 /**
  * clears the directory skip-list
@@ -183,7 +183,7 @@ DLLEXPORT VOID WINAPI usvfsClearSkipDirectories();
  * adds a library to be force loaded when the given process is injected
  * @param
  */
-DLLEXPORT VOID WINAPI usvfsForceLoadLibrary(LPWSTR processName, LPWSTR libraryPath);
+DLLEXPORT VOID WINAPI usvfsForceLoadLibrary(LPCWSTR processName, LPCWSTR libraryPath);
 
 /**
  * clears all previous calls to ForceLoadLibrary
