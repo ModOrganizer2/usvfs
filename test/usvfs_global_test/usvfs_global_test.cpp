@@ -3,6 +3,8 @@
 #include <filesystem>
 #include <fstream>
 
+#include "../usvfs_global_test_runner/gtest_utils.h"
+
 class
 {
   bool initialize(int argc, char* argv[])
@@ -29,6 +31,13 @@ public:
   const auto& data() const { return m_data; }
 } parameters;
 
+// simple function to write content to a specified path
+void write_content(const std::filesystem::path& path, const std::string_view content)
+{
+  std::ofstream ofs{path};
+  ofs << content;
+}
+
 TEST(BasicTest, SimpleTest)
 {
   const auto data = parameters.data();
@@ -52,10 +61,21 @@ TEST(RedFileSystemTest, RedFileSystemTest)
   ASSERT_EQ(hudpainter_path / "TEST.json",
             weakly_canonical(hudpainter_path / "TEST.json"));
 
-  {
-    std::ofstream of{hudpainter_path / "TEST.json"};
-    of << "{}\n";
-  }
+  write_content(hudpainter_path / "TEST.json", "{}");
+}
+
+TEST(SkipFilesTest, SkipFilesTest)
+{
+  const auto data = parameters.data();
+
+  // file in mod1 should have been skipped
+  ASSERT_FALSE(exists(data / "readme.skip"));
+
+  // docs/doc.skip should come from data, not mods1/docs/doc.skip
+  ASSERT_CONTENT_EQ("doc.skip in data/docs", data / "docs" / "doc.skip");
+
+  // write to readme.skip should create a file in overwrite
+  write_content(data / "readme.skip", "readme.skip in overwrite");
 }
 
 int main(int argc, char* argv[])

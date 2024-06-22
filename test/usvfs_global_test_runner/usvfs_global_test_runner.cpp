@@ -19,6 +19,16 @@ TEST_F(UsvfsGlobalTest, RedFileSystemTest)
   ASSERT_DIRECTORY_EQ(ExpectedFolder(), ActualFolder());
 }
 
+TEST_F(UsvfsGlobalTest, SkipFilesTest)
+{
+  SetUpOverwrite(true);
+
+  usvfsAddSkipFileSuffix(L".skip");
+
+  ASSERT_EQ(0, Run());
+  ASSERT_DIRECTORY_EQ(ExpectedFolder(), ActualFolder());
+}
+
 int main(int argc, char* argv[])
 {
   // load the USVFS DLL
