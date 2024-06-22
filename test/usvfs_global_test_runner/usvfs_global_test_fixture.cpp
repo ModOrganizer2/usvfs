@@ -150,7 +150,7 @@ void UsvfsGlobalTest::SetUpOverwrite(bool force) const
   }
 }
 
-void UsvfsGlobalTest::PreapreMapping() const
+void UsvfsGlobalTest::PrepareMapping() const
 {
   // should not be needed, but just to be safe
   usvfsClearVirtualMappings();
@@ -176,6 +176,8 @@ void UsvfsGlobalTest::PreapreMapping() const
 
 int UsvfsGlobalTest::Run() const
 {
+  PrepareMapping();
+
   const auto res = spawn_usvfs_hooked_process(
       path_to_usvfs_global_test(), {std::format(L"--gtest_filter={}.*", m_group),
                                     L"--gtest_brief=1", m_data_folder.native()});

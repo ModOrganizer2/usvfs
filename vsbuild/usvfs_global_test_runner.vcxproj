@@ -19,6 +19,7 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="..\test\usvfs_global_test_runner\gtest_utils.cpp" />
     <ClCompile Include="..\test\usvfs_global_test_runner\usvfs_global_test_fixture.cpp" />
     <ClCompile Include="..\test\usvfs_global_test_runner\usvfs_global_test_runner.cpp" />
   </ItemGroup>
