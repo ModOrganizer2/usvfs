@@ -47,6 +47,11 @@ TEST(BasicTest, SimpleTest)
   ASSERT_TRUE(exists(data / "empty"));
   ASSERT_TRUE(exists(data / "docs" / "doc.txt"));
   ASSERT_TRUE(exists(data / "readme.txt"));
+
+  // should remove mods/mod1/info.txt
+  ASSERT_TRUE(exists(data / "info.txt"));
+  remove(data / "info.txt");
+  ASSERT_FALSE(exists(data / "info.txt"));
 }
 
 TEST(RedFileSystemTest, RedFileSystemTest)
