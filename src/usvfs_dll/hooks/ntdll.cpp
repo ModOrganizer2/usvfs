@@ -1068,7 +1068,8 @@ DLLEXPORT NTSTATUS WINAPI usvfs::hook_NtQueryObject(
                         ObjectInformationLength, ReturnLength);
   POST_REALCALL
 
-  if (res == STATUS_SUCCESS && (ObjectInformationClass == ObjectNameInformation)) {
+  if ((res == STATUS_SUCCESS || res == STATUS_INFO_LENGTH_MISMATCH)
+    && (ObjectInformationClass == ObjectNameInformation)) {
     const auto trackerInfo = ntdllHandleTracker.lookup(Handle);
     const auto redir       = applyReroute(READ_CONTEXT(), callContext, trackerInfo);
 
@@ -1150,7 +1151,7 @@ DLLEXPORT NTSTATUS WINAPI usvfs::hook_NtQueryInformationFile(
                                  FileInformationClass);
   POST_REALCALL
 
-  if (res == STATUS_SUCCESS && (
+  if ((res == STATUS_SUCCESS || res == STATUS_INFO_LENGTH_MISMATCH) && (
     FileInformationClass == FileNameInformation 
     || FileInformationClass == FileAllInformation 
     || FileInformationClass == FileNormalizedNameInformation)) {
@@ -1160,22 +1161,30 @@ DLLEXPORT NTSTATUS WINAPI usvfs::hook_NtQueryInformationFile(
 
     // TODO: difference between FileNameInformation and FileNormalizedNameInformation
 
+    // maximum file length in WCHAR
+    ULONG maxNameSize; 
     FILE_NAME_INFORMATION *info;
     if (FileInformationClass == FileAllInformation) {
       info = &reinterpret_cast<FILE_ALL_INFORMATION*>(FileInformation)->NameInformation;
+      maxNameSize = (Length - sizeof(FILE_ALL_INFORMATION) + sizeof(WCHAR)) / 2;
     } else {
-      info = reinterpret_cast<FILE_NAME_INFORMATION*>(FileInformation);
+      info        = reinterpret_cast<FILE_NAME_INFORMATION*>(FileInformation);
+      maxNameSize = (Length - sizeof(FILE_NAME_INFORMATION) + sizeof(WCHAR)) / 2;
     }
 
     if (redir.redirected)
     {
-      LPCWSTR filenameFixed = static_cast<LPCWSTR>(trackerInfo);
-      if (info->FileName[0] == L'\\') {
-        // strip the \??\X: prefix (X being the drive name)
-        filenameFixed = filenameFixed + 6;
+      if (maxNameSize < trackerInfo.size()) {
+        res = STATUS_INFO_LENGTH_MISMATCH;
+      } else {
+        LPCWSTR filenameFixed = static_cast<LPCWSTR>(trackerInfo);
+        if (info->FileName[0] == L'\\') {
+          // strip the \??\X: prefix (X being the drive name)
+          filenameFixed = filenameFixed + 6;
+        }
+        SetInfoFilename(FileInformation, FileInformationClass, filenameFixed);
       }
-      SetInfoFilename(FileInformation, FileInformationClass, filenameFixed);
-    };
+    }
 
     LOG_CALL()
       .PARAMWRAP(res)
@@ -1183,7 +1192,9 @@ DLLEXPORT NTSTATUS WINAPI usvfs::hook_NtQueryInformationFile(
       .PARAM(FileInformationClass)
       .PARAM(redir.redirected)
       .PARAM(redir.path)
-      .addParam("name_info", std::wstring{info->FileName, info->FileNameLength / sizeof(WCHAR)});
+      .addParam("name_info", res == STATUS_SUCCESS ? std::wstring{info->FileName,
+                                                  info->FileNameLength / sizeof(WCHAR)}
+                                   : std::wstring{});
 
   }
 
