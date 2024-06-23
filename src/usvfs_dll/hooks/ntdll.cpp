@@ -331,11 +331,6 @@ void GetInfoData(LPCVOID address, FILE_INFORMATION_CLASS infoClass,
 template <typename T>
 void SetInfoFilenameImpl(T *info, const std::wstring &fileName)
 {
-  // not sure if the filename is supposed to be zero terminated but I did get
-  // invalid
-  // filenames when the buffer wasn't zeroed
-  memset(info->FileName, L'\0', info->FileNameLength);
-
   info->FileNameLength = static_cast<ULONG>(fileName.length() * sizeof(WCHAR));
   memcpy(info->FileName, fileName.c_str(), info->FileNameLength + 1);
 }
@@ -1167,11 +1162,15 @@ DLLEXPORT NTSTATUS WINAPI usvfs::hook_NtQueryInformationFile(
   // we do not handle STATUS_INFO_LENGTH_MISMATCH because this is only returned if
   // the length is too small to old the structure itself (regardless of the name)
   // 
+  // TODO: currently, this does not handle STATUS_BUFFER_OVERLOW for ALL information
+  // because most of the structures would need to be manually filled, which is very
+  // complicated - this should not pose huge issue
+  // 
   if ((res == STATUS_SUCCESS || res == STATUS_BUFFER_OVERFLOW) &&
-      (
-    FileInformationClass == FileNameInformation 
+      (FileInformationClass == FileNameInformation 
     || FileInformationClass == FileAllInformation 
-    || FileInformationClass == FileNormalizedNameInformation)) {
+    || FileInformationClass == FileNormalizedNameInformation) &&
+      !(FileInformationClass == FileAllInformation && res == STATUS_BUFFER_OVERFLOW)) {
 
     const auto trackerInfo = ntdllHandleTracker.lookup(FileHandle);
     const auto redir = applyReroute(READ_CONTEXT(), callContext, trackerInfo);
@@ -1185,25 +1184,35 @@ DLLEXPORT NTSTATUS WINAPI usvfs::hook_NtQueryInformationFile(
     // it is close to the sizeof the structure + the number of bytes in the name, except 
     // for the alignment that gives us a bit more space
     //
-    ULONG maximumLength; 
+    ULONG prefixStructLength;
     FILE_NAME_INFORMATION *info;
     if (FileInformationClass == FileAllInformation) {
       info = &reinterpret_cast<FILE_ALL_INFORMATION*>(FileInformation)->NameInformation;
-      maximumLength = (Length - sizeof(FILE_ALL_INFORMATION) + 4);
+      prefixStructLength = sizeof(FILE_ALL_INFORMATION) - 4;
     } else {
       info        = reinterpret_cast<FILE_NAME_INFORMATION*>(FileInformation);
-      maximumLength = (Length - sizeof(FILE_NAME_INFORMATION) + 4);
+      prefixStructLength = sizeof(FILE_NAME_INFORMATION) - 4;
     }
 
     if (redir.redirected)
     {
-      if (maximumLength < trackerInfo.size() - 6) {
+      auto requiredLength = prefixStructLength + 2 * (trackerInfo.size() - 6);
+      if (Length < requiredLength) {
         res = STATUS_BUFFER_OVERFLOW;
       } else {
         // strip the \??\X: prefix (X being the drive name)
         LPCWSTR filenameFixed = static_cast<LPCWSTR>(trackerInfo) + 6;
-        SetInfoFilename(FileInformation, FileInformationClass, filenameFixed);
+
+        // not using SetInfoFilename because the length is not set and we do not need to 
+        // 0-out the memory here
+        info->FileNameLength = (trackerInfo.size() - 6) * 2;
+        wmemcpy(info->FileName, filenameFixed, trackerInfo.size() - 6);
         res = STATUS_SUCCESS;
+
+        // update status block, Information is the number of bytes written, basically
+        // the required length
+        IoStatusBlock->Status = STATUS_SUCCESS;
+        IoStatusBlock->Information = static_cast<ULONG_PTR>(requiredLength);
       }
     }
 

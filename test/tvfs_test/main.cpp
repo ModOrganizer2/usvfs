@@ -409,7 +409,7 @@ TEST_F(USVFSTest, NtQueryObjectVirtualFile)
 
     FILE_NAME_INFORMATION* fileNameInfo =
         reinterpret_cast<FILE_NAME_INFORMATION*>(buffer);
-    ASSERT_EQ(0, wcscmp(fileNameInfo->FileName, L"\\np.exe"));
+    ASSERT_EQ(L"\\np.exe", std::wstring(fileNameInfo->FileName, fileNameInfo->FileNameLength / 2));
   }
 
   {
@@ -417,11 +417,13 @@ TEST_F(USVFSTest, NtQueryObjectVirtualFile)
     IO_STATUS_BLOCK status;
     const auto res = usvfs::hook_NtQueryInformationFile(
         hdl, &status, buffer, sizeof(buffer), FileNormalizedNameInformation);
+    ASSERT_EQ(STATUS_SUCCESS, res);
     ASSERT_EQ(STATUS_SUCCESS, status.Status);
+    ASSERT_EQ(sizeof(ULONG) + 7 * 2, status.Information);
 
     FILE_NAME_INFORMATION* fileNameInfo =
         reinterpret_cast<FILE_NAME_INFORMATION*>(buffer);
-    ASSERT_EQ(0, wcscmp(fileNameInfo->FileName, L"\\np.exe"));
+    ASSERT_EQ(L"\\np.exe", std::wstring(fileNameInfo->FileName, fileNameInfo->FileNameLength / 2));
   }
 
   // buffer of size should be too small for the original path (\Windows\notepad.exe)
@@ -430,21 +432,24 @@ TEST_F(USVFSTest, NtQueryObjectVirtualFile)
     // the required size should be sizeof(ULONG) + 7 * 2 but apparently that is 
     // not enough for the CI so using 16 * 2 which should be large enough for
     // the hooked version, but still too short for the non-hooked one
-    char buffer[sizeof(ULONG) + 16 * 2];
+    char buffer[sizeof(ULONG) + 7 * 2];
     IO_STATUS_BLOCK status;
     NTSTATUS res;
 
     res = ::NtQueryInformationFile(
-        hdl, &status, buffer, sizeof(buffer), FileNameInformation);
+      hdl, &status, buffer, sizeof(buffer), FileNameInformation);
     ASSERT_EQ(STATUS_BUFFER_OVERFLOW, res);
+    ASSERT_EQ(STATUS_BUFFER_OVERFLOW, status.Status);
 
     res = usvfs::hook_NtQueryInformationFile(
-        hdl, &status, buffer, sizeof(buffer), FileNameInformation);
+      hdl, &status, buffer, sizeof(buffer), FileNameInformation);
+    ASSERT_EQ(STATUS_SUCCESS, res);
     ASSERT_EQ(STATUS_SUCCESS, status.Status);
+    ASSERT_EQ(sizeof(ULONG) + 7 * 2, status.Information);
 
     FILE_NAME_INFORMATION* fileNameInfo =
         reinterpret_cast<FILE_NAME_INFORMATION*>(buffer);
-    ASSERT_EQ(0, wcscmp(fileNameInfo->FileName, L"\\np.exe"));
+    ASSERT_EQ(L"\\np.exe", std::wstring(fileNameInfo->FileName, fileNameInfo->FileNameLength / 2));
   }
 
   {
