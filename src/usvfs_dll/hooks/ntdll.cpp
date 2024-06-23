@@ -1200,11 +1200,8 @@ DLLEXPORT NTSTATUS WINAPI usvfs::hook_NtQueryInformationFile(
       if (maximumLength < trackerInfo.size() - 6) {
         res = STATUS_BUFFER_OVERFLOW;
       } else {
-        LPCWSTR filenameFixed = static_cast<LPCWSTR>(trackerInfo);
-        if (info->FileName[0] == L'\\') {
-          // strip the \??\X: prefix (X being the drive name)
-          filenameFixed = filenameFixed + 6;
-        }
+        // strip the \??\X: prefix (X being the drive name)
+        LPCWSTR filenameFixed = static_cast<LPCWSTR>(trackerInfo) + 6;
         SetInfoFilename(FileInformation, FileInformationClass, filenameFixed);
         res = STATUS_SUCCESS;
       }
