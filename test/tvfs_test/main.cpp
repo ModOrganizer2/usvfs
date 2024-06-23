@@ -404,7 +404,7 @@ TEST_F(USVFSTest, NtQueryObjectVirtualFile)
     char buffer[1024];
     IO_STATUS_BLOCK status;
     const auto res = usvfs::hook_NtQueryInformationFile(
-        hdl, &status, buffer, sizeof(buffer), FileNameInformation);
+      hdl, &status, buffer, sizeof(buffer), FileNameInformation);
     ASSERT_EQ(STATUS_SUCCESS, status.Status);
 
     FILE_NAME_INFORMATION* fileNameInfo =

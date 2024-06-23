@@ -78,25 +78,34 @@ TEST(BasicTest, SimpleTest)
   remove(data / "info.txt");
   ASSERT_FALSE(exists(data / "info.txt"));
 
+  std::filesystem::path dataPathFromHandle;
   {
     const auto doc_txt = data / "docs" / "doc.txt";
-    HandleGuard hdl    = CreateFileW(doc_txt.c_str(), FILE_READ_ATTRIBUTES, 0, nullptr,
+    HandleGuard hdl = CreateFileW(data.c_str(), GENERIC_READ, 0, nullptr, OPEN_EXISTING,
+                                  FILE_FLAG_BACKUP_SEMANTICS, nullptr);
+    ASSERT_NE(INVALID_HANDLE_VALUE, (HANDLE)hdl);
+
+    WCHAR filepath[1024];
+    const auto length = GetFinalPathNameByHandleW(
+        hdl, filepath, sizeof(filepath) / sizeof(WCHAR), FILE_NAME_NORMALIZED);
+    ASSERT_NE(0, length);
+
+    dataPathFromHandle = std::filesystem::path(std::wstring(filepath, length));
+  }
+
+  {
+    const auto doc_txt = data / "docs" / "doc.txt";
+    HandleGuard hdl    = CreateFileW(doc_txt.c_str(), GENERIC_READ, 0, nullptr,
                                      OPEN_EXISTING, FILE_FLAG_BACKUP_SEMANTICS, nullptr);
     ASSERT_NE(INVALID_HANDLE_VALUE, (HANDLE)hdl);
 
     WCHAR filepath[1024];
     const auto length = GetFinalPathNameByHandleW(
         hdl, filepath, sizeof(filepath) / sizeof(WCHAR), FILE_NAME_NORMALIZED);
-    const auto lastError = ::GetLastError();
-    ASSERT_NE(0, length) << "last error=" << ::GetLastError();
+    ASSERT_NE(0, length);
 
-    // we need to construct a new path because the format returned by
-    // GetFinalPathNameByHandleW is not really standardized (or is it?)
-
-    // TODO: more tests for this
-
-    ASSERT_EQ(data / "docs" / "doc.txt",
-              canonical(std::filesystem::path(std::wstring(filepath, length))));
+    ASSERT_EQ(dataPathFromHandle / "docs" / "doc.txt",
+              std::filesystem::path(std::wstring(filepath, length)));
   }
 }
 
