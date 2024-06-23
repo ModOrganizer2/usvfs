@@ -291,9 +291,8 @@ HANDLE hooked_NtOpenFile(LPCWSTR path, ACCESS_MASK accessMask, ULONG shareAccess
   attributes.ObjectName = &string;
   
   HANDLE ret = INVALID_HANDLE_VALUE;
-  if (usvfs::hook_NtOpenFile(&ret, accessMask | SYNCHRONIZE, 
-    &attributes, &statusBlock, shareAccess, 
-    openOptions | FILE_SYNCHRONOUS_IO_NONALERT) != STATUS_SUCCESS)
+  if (usvfs::hook_NtOpenFile(&ret, accessMask, &attributes, 
+    &statusBlock, shareAccess, openOptions) != STATUS_SUCCESS)
   {
     return INVALID_HANDLE_VALUE;
   }
@@ -310,7 +309,7 @@ TEST_F(USVFSTest, NtQueryDirectoryFileRegularFile)
     L"C:\\"
     , FILE_GENERIC_READ
     , FILE_SHARE_READ | FILE_SHARE_WRITE
-    , OPEN_EXISTING);
+    , FILE_DIRECTORY_FILE | FILE_SYNCHRONOUS_IO_NONALERT);
   ASSERT_NE(INVALID_HANDLE_VALUE, hdl);
 
   IO_STATUS_BLOCK status;
@@ -329,6 +328,8 @@ TEST_F(USVFSTest, NtQueryDirectoryFileRegularFile)
                                , TRUE);
 
   ASSERT_EQ(STATUS_SUCCESS, status.Status);
+
+  usvfs::hook_NtClose(hdl);
 }
 
 TEST_F(USVFSTest, NtQueryDirectoryFileFindsVirtualFile)
@@ -343,7 +344,7 @@ TEST_F(USVFSTest, NtQueryDirectoryFileFindsVirtualFile)
     L"C:\\"
     , FILE_GENERIC_READ
     , FILE_SHARE_READ | FILE_SHARE_WRITE
-    , OPEN_EXISTING);
+    , FILE_DIRECTORY_FILE | FILE_SYNCHRONOUS_IO_NONALERT);
   ASSERT_NE(INVALID_HANDLE_VALUE, hdl);
 
   IO_STATUS_BLOCK status;
@@ -366,7 +367,62 @@ TEST_F(USVFSTest, NtQueryDirectoryFileFindsVirtualFile)
   FILE_DIRECTORY_INFORMATION *info = reinterpret_cast<FILE_DIRECTORY_INFORMATION*>(buffer);
   ASSERT_EQ(STATUS_SUCCESS, status.Status);
   ASSERT_EQ(0, wcscmp(info->FileName, L"np.exe"));
+
+  usvfs::hook_NtClose(hdl);
 }
+
+TEST_F(USVFSTest, NtQueryObjectVirtualFile)
+{
+  auto params = defaultUsvfsParams();
+  std::unique_ptr<usvfs::HookContext> ctx(
+      usvfsCreateHookContext(*params, ::GetModuleHandle(nullptr)));
+  usvfs::RedirectionTreeContainer& tree = ctx->redirectionTable();
+
+  tree.addFile(L"C:\\np.exe", usvfs::RedirectionDataLocal(REAL_FILEA));
+
+  HANDLE hdl = hooked_NtOpenFile(L"C:\\np.exe"
+    , FILE_GENERIC_READ
+    , FILE_SHARE_READ | FILE_SHARE_WRITE
+    , FILE_NON_DIRECTORY_FILE | FILE_OPEN_FOR_BACKUP_INTENT);
+  ASSERT_NE(INVALID_HANDLE_VALUE, hdl) << "last error=" << ::GetLastError();
+
+  {
+    char buffer[1024];
+    IO_STATUS_BLOCK status;
+    const auto res = usvfs::hook_NtQueryInformationFile(
+        hdl, &status, buffer, sizeof(buffer), FileNameInformation);
+    ASSERT_EQ(STATUS_SUCCESS, status.Status);
+
+    FILE_NAME_INFORMATION* fileNameInfo =
+        reinterpret_cast<FILE_NAME_INFORMATION*>(buffer);
+    ASSERT_EQ(0, wcscmp(fileNameInfo->FileName, L"\\np.exe"));
+  }
+
+  {
+    char buffer[1024];
+    IO_STATUS_BLOCK status;
+    const auto res = usvfs::hook_NtQueryInformationFile(
+        hdl, &status, buffer, sizeof(buffer), FileNormalizedNameInformation);
+    ASSERT_EQ(STATUS_SUCCESS, status.Status);
+
+    FILE_NAME_INFORMATION* fileNameInfo =
+        reinterpret_cast<FILE_NAME_INFORMATION*>(buffer);
+    ASSERT_EQ(0, wcscmp(fileNameInfo->FileName, L"\\np.exe"));
+  }
+
+  {
+    char buffer[2048];
+    const auto res = usvfs::hook_NtQueryObject(hdl, ObjectNameInformation, buffer,
+                                               sizeof(buffer), nullptr);
+    ASSERT_EQ(STATUS_SUCCESS, res);
+
+    OBJECT_NAME_INFORMATION *information = reinterpret_cast<OBJECT_NAME_INFORMATION*>(buffer);
+    ASSERT_EQ(L"\\Device\\HarddiskVolume3\\np.exe", std::wstring(information->Name.Buffer, information->Name.Length / sizeof(wchar_t)));
+  }
+
+  usvfs::hook_NtClose(hdl);
+}
+
 
 TEST_F(USVFSTestAuto, CannotCreateLinkToFileInNonexistantDirectory)
 {

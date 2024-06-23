@@ -74,6 +74,13 @@ DWORD spawn_usvfs_hooked_process(
   return exit;
 }
 
+bool UsvfsGlobalTest::m_force_usvfs_logs = false;
+
+void UsvfsGlobalTest::ForceUsvfsLogs()
+{
+  m_force_usvfs_logs = true;
+}
+
 class UsvfsGlobalTest::UsvfsGuard
 {
 public:
@@ -183,7 +190,7 @@ int UsvfsGlobalTest::Run() const
                                     L"--gtest_brief=1", m_data_folder.native()});
 
   // TODO: try to do this with gtest itself?
-  if (res != 0) {
+  if (m_force_usvfs_logs || res != 0) {
     const auto log_path = test::path_of_test_bin(m_group + L".log");
     std::ofstream os{log_path};
     std::string buffer(1024, '\0');

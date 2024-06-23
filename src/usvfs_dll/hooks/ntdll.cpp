@@ -1068,9 +1068,66 @@ DLLEXPORT NTSTATUS WINAPI usvfs::hook_NtQueryObject(
                         ObjectInformationLength, ReturnLength);
   POST_REALCALL
 
-  LOG_CALL()
-    .addParam("path", ntdllHandleTracker.lookup(Handle))
-    .PARAM(ObjectInformationClass);
+  if (res == STATUS_SUCCESS && (ObjectInformationClass == ObjectNameInformation)) {
+    const auto trackerInfo = ntdllHandleTracker.lookup(Handle);
+    const auto redir       = applyReroute(READ_CONTEXT(), callContext, trackerInfo);
+
+    OBJECT_NAME_INFORMATION* info =
+        reinterpret_cast<OBJECT_NAME_INFORMATION*>(ObjectInformation);
+   
+    if (redir.redirected) {
+      // https://learn.microsoft.com/en-us/windows/win32/fileio/displaying-volume-paths
+      // 
+      
+      // TODO: is that always true?
+      // path should start with \??\X: - we need to replace this by device name
+      //
+      WCHAR deviceName[MAX_PATH];
+      std::wstring buffer(static_cast<LPCWSTR>(trackerInfo));
+      buffer[6] = L'\0';
+
+      const auto charCount = QueryDosDeviceW(buffer.data() + 4, deviceName, ARRAYSIZE(deviceName)); 
+
+      buffer =
+          std::wstring(deviceName) + L'\\' + std::wstring(buffer.data() + 7, buffer.size() - 7);
+
+      // TODO: check this...
+      if (ObjectInformationLength < buffer.size() * 2 + sizeof(OBJECT_NAME_INFORMATION)) {
+        res = STATUS_INFO_LENGTH_MISMATCH;
+
+        if (ReturnLength) {
+          *ReturnLength = buffer.size() * 2 + sizeof(OBJECT_NAME_INFORMATION);
+        }
+      } else {
+        // fill the object with 0 - not sure if mandatory
+        memset(ObjectInformation, L'\0', ObjectInformationLength);
+
+        // put the unicode buffer at the end of the object
+        const auto unicodeBufferLength =
+            ObjectInformationLength - sizeof(OBJECT_NAME_INFORMATION);
+        LPWSTR unicodeBuffer = reinterpret_cast<LPWSTR>(
+          static_cast<LPSTR>(ObjectInformation) + sizeof(OBJECT_NAME_INFORMATION));
+
+        // copy the path into the buffer
+        wmemcpy(unicodeBuffer, buffer.data(), buffer.size());
+
+        // update the actual unicode string
+        info->Name.Buffer        = unicodeBuffer;
+        info->Name.Length        = buffer.size() * 2;
+        info->Name.MaximumLength = unicodeBufferLength;
+      }
+    }
+
+    LOG_CALL()
+        .PARAMWRAP(res)
+        .PARAM(ObjectInformationLength)
+        .addParam("return_length", ReturnLength ? *ReturnLength : -1)
+        .addParam("tracker_path", trackerInfo)
+        .PARAM(ObjectInformationClass)
+        .PARAM(redir.redirected)
+        .PARAM(redir.path)
+        .addParam("name_info", info->Name);
+  }
 
   HOOK_END
   return res;
@@ -1112,15 +1169,21 @@ DLLEXPORT NTSTATUS WINAPI usvfs::hook_NtQueryInformationFile(
 
     if (redir.redirected)
     {
-      SetInfoFilename(FileInformation, FileInformationClass, static_cast<LPCWSTR>(redir.path));
+      LPCWSTR filenameFixed = static_cast<LPCWSTR>(trackerInfo);
+      if (info->FileName[0] == L'\\') {
+        // strip the \??\X: prefix (X being the drive name)
+        filenameFixed = filenameFixed + 6;
+      }
+      SetInfoFilename(FileInformation, FileInformationClass, filenameFixed);
     };
 
     LOG_CALL()
+      .PARAMWRAP(res)
       .addParam("tracker_path", trackerInfo)
       .PARAM(FileInformationClass)
       .PARAM(redir.redirected)
       .PARAM(redir.path)
-      .addParam("name_info", std::wstring{info->FileName, info->FileNameLength});
+      .addParam("name_info", std::wstring{info->FileName, info->FileNameLength / sizeof(WCHAR)});
 
   }
 

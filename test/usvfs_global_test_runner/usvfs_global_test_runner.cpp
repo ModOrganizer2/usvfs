@@ -44,6 +44,8 @@ int main(int argc, char* argv[])
 
   testing::InitGoogleTest(&argc, argv);
 
+  UsvfsGlobalTest::ForceUsvfsLogs();
+
   usvfsInitLogging(false);
 
   return RUN_ALL_TESTS();

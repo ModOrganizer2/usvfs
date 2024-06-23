@@ -74,6 +74,16 @@ struct std::formatter<PCUNICODE_STRING, char> : std::formatter<std::string, char
   }
 };
 
+template <>
+struct std::formatter<UNICODE_STRING, char> : std::formatter<std::string, char>
+{
+  template <class FmtContext>
+  FmtContext::iterator format(UNICODE_STRING v, FmtContext& ctx) const
+  {
+    return std::formatter<std::string, char>::format(usvfs::log::to_string(&v), ctx);
+  }
+};
+
 template <class Pointer>
   requires (std::is_pointer_v<Pointer>
     && !std::is_same_v<Pointer, const char*>

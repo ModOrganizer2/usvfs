@@ -8,12 +8,15 @@
 class UsvfsGlobalTest : public testing::Test
 {
 public:
+  // enable log mode - this will generate USVFS log file for all tests regardless of
+  // success or failure (default is to only generate for failure)
+  //
+  static void ForceUsvfsLogs();
+
+public:
   UsvfsGlobalTest();
 
-  void SetUp() override
-  {
-    PrepareFileSystem();
-  }
+  void SetUp() override { PrepareFileSystem(); }
 
   void TearDown() override { CleanUp(); }
 
@@ -41,6 +44,9 @@ public:
 
 private:
   class UsvfsGuard;
+
+  // always generate usvfs logs
+  static bool m_force_usvfs_logs;
 
   // prepare the filesystem by copying files and folders from the relevant fixtures
   // folder to the temporary folder
