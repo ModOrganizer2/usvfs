@@ -1068,6 +1068,12 @@ DLLEXPORT NTSTATUS WINAPI usvfs::hook_NtQueryObject(
                         ObjectInformationLength, ReturnLength);
   POST_REALCALL
 
+  // we handle both SUCCESS and BUFFER_OVERFLOW since the fixed name might be
+  // smaller than the original one
+  //
+  // we do not handle STATUS_INFO_LENGTH_MISMATCH because this is only returned if 
+  // the length is too small to old the structure itself (regardless of the name)
+  // 
   if ((res == STATUS_SUCCESS || res == STATUS_BUFFER_OVERFLOW)
     && (ObjectInformationClass == ObjectNameInformation)) {
     const auto trackerInfo = ntdllHandleTracker.lookup(Handle);
@@ -1092,17 +1098,16 @@ DLLEXPORT NTSTATUS WINAPI usvfs::hook_NtQueryObject(
       buffer =
           std::wstring(deviceName) + L'\\' + std::wstring(buffer.data() + 7, buffer.size() - 7);
 
-      // TODO: check this...
-      if (ObjectInformationLength < buffer.size() * 2 + sizeof(OBJECT_NAME_INFORMATION)) {
+      // the name is put in the buffer AFTER the struct, so the required size if 
+      // sizeof(OBJECT_NAME_INFORMATION) + the number of bytes for the name + 2 bytes for a wide null character
+      const auto requiredLength = sizeof(OBJECT_NAME_INFORMATION) + buffer.size() * 2 + 2;
+      if (ObjectInformationLength < requiredLength) {
         res = STATUS_BUFFER_OVERFLOW;
 
         if (ReturnLength) {
-          *ReturnLength = buffer.size() * 2 + sizeof(OBJECT_NAME_INFORMATION);
+          *ReturnLength = requiredLength;
         }
       } else {
-        // fill the object with 0 - not sure if mandatory
-        memset(ObjectInformation, L'\0', ObjectInformationLength);
-
         // put the unicode buffer at the end of the object
         const auto unicodeBufferLength =
             ObjectInformationLength - sizeof(OBJECT_NAME_INFORMATION);
@@ -1111,6 +1116,9 @@ DLLEXPORT NTSTATUS WINAPI usvfs::hook_NtQueryObject(
 
         // copy the path into the buffer
         wmemcpy(unicodeBuffer, buffer.data(), buffer.size());
+
+        // set the null character
+        unicodeBuffer[buffer.size()] = L'\0';
 
         // update the actual unicode string
         info->Name.Buffer        = unicodeBuffer;
@@ -1153,6 +1161,12 @@ DLLEXPORT NTSTATUS WINAPI usvfs::hook_NtQueryInformationFile(
                                  FileInformationClass);
   POST_REALCALL
 
+  // we handle both SUCCESS and BUFFER_OVERFLOW since the fixed name might be
+  // smaller than the original one
+  //
+  // we do not handle STATUS_INFO_LENGTH_MISMATCH because this is only returned if
+  // the length is too small to old the structure itself (regardless of the name)
+  // 
   if ((res == STATUS_SUCCESS || res == STATUS_BUFFER_OVERFLOW) &&
       (
     FileInformationClass == FileNameInformation 
@@ -1164,20 +1178,26 @@ DLLEXPORT NTSTATUS WINAPI usvfs::hook_NtQueryInformationFile(
 
     // TODO: difference between FileNameInformation and FileNormalizedNameInformation
 
-    // maximum file length in WCHAR
-    ULONG maxNameSize; 
+    // maximum length in bytes - the required length is
+    // - for ALL, 100 + the number of bytes in the name (not account for null character)
+    // - for NAME, 4 + the number of bytes in the name (not accounting for null character)
+    //
+    // it is close to the sizeof the structure + the number of bytes in the name, except 
+    // for the alignment that gives us a bit more space
+    //
+    ULONG maximumLength; 
     FILE_NAME_INFORMATION *info;
     if (FileInformationClass == FileAllInformation) {
       info = &reinterpret_cast<FILE_ALL_INFORMATION*>(FileInformation)->NameInformation;
-      maxNameSize = (Length - sizeof(FILE_ALL_INFORMATION) + sizeof(WCHAR)) / 2;
+      maximumLength = (Length - sizeof(FILE_ALL_INFORMATION) + 4);
     } else {
       info        = reinterpret_cast<FILE_NAME_INFORMATION*>(FileInformation);
-      maxNameSize = (Length - sizeof(FILE_NAME_INFORMATION) + sizeof(WCHAR)) / 2;
+      maximumLength = (Length - sizeof(FILE_NAME_INFORMATION) + 4);
     }
 
     if (redir.redirected)
     {
-      if (maxNameSize < trackerInfo.size() - 6) {
+      if (maximumLength < trackerInfo.size() - 6) {
         res = STATUS_BUFFER_OVERFLOW;
       } else {
         LPCWSTR filenameFixed = static_cast<LPCWSTR>(trackerInfo);
