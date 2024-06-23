@@ -1068,7 +1068,7 @@ DLLEXPORT NTSTATUS WINAPI usvfs::hook_NtQueryObject(
                         ObjectInformationLength, ReturnLength);
   POST_REALCALL
 
-  if ((res == STATUS_SUCCESS || res == STATUS_INFO_LENGTH_MISMATCH)
+  if ((res == STATUS_SUCCESS || res == STATUS_BUFFER_OVERFLOW)
     && (ObjectInformationClass == ObjectNameInformation)) {
     const auto trackerInfo = ntdllHandleTracker.lookup(Handle);
     const auto redir       = applyReroute(READ_CONTEXT(), callContext, trackerInfo);
@@ -1094,7 +1094,7 @@ DLLEXPORT NTSTATUS WINAPI usvfs::hook_NtQueryObject(
 
       // TODO: check this...
       if (ObjectInformationLength < buffer.size() * 2 + sizeof(OBJECT_NAME_INFORMATION)) {
-        res = STATUS_INFO_LENGTH_MISMATCH;
+        res = STATUS_BUFFER_OVERFLOW;
 
         if (ReturnLength) {
           *ReturnLength = buffer.size() * 2 + sizeof(OBJECT_NAME_INFORMATION);
@@ -1116,6 +1116,8 @@ DLLEXPORT NTSTATUS WINAPI usvfs::hook_NtQueryObject(
         info->Name.Buffer        = unicodeBuffer;
         info->Name.Length        = buffer.size() * 2;
         info->Name.MaximumLength = unicodeBufferLength;
+
+        res                      = STATUS_SUCCESS;
       }
     }
 
@@ -1151,7 +1153,8 @@ DLLEXPORT NTSTATUS WINAPI usvfs::hook_NtQueryInformationFile(
                                  FileInformationClass);
   POST_REALCALL
 
-  if ((res == STATUS_SUCCESS || res == STATUS_INFO_LENGTH_MISMATCH) && (
+  if ((res == STATUS_SUCCESS || res == STATUS_BUFFER_OVERFLOW) &&
+      (
     FileInformationClass == FileNameInformation 
     || FileInformationClass == FileAllInformation 
     || FileInformationClass == FileNormalizedNameInformation)) {
@@ -1174,8 +1177,8 @@ DLLEXPORT NTSTATUS WINAPI usvfs::hook_NtQueryInformationFile(
 
     if (redir.redirected)
     {
-      if (maxNameSize < trackerInfo.size()) {
-        res = STATUS_INFO_LENGTH_MISMATCH;
+      if (maxNameSize < trackerInfo.size() - 6) {
+        res = STATUS_BUFFER_OVERFLOW;
       } else {
         LPCWSTR filenameFixed = static_cast<LPCWSTR>(trackerInfo);
         if (info->FileName[0] == L'\\') {
@@ -1183,6 +1186,7 @@ DLLEXPORT NTSTATUS WINAPI usvfs::hook_NtQueryInformationFile(
           filenameFixed = filenameFixed + 6;
         }
         SetInfoFilename(FileInformation, FileInformationClass, filenameFixed);
+        res = STATUS_SUCCESS;
       }
     }
 
