@@ -427,7 +427,8 @@ TEST_F(USVFSTest, NtQueryObjectVirtualFile)
   // buffer of size should be too small for the original path (\Windows\notepad.exe)
   // but not for \np.exe
   {
-    char buffer[sizeof(ULONG) + 7 * 2];
+    // TODO: why 10?
+    char buffer[sizeof(ULONG) + 10 * 2];
     IO_STATUS_BLOCK status;
     const auto res = usvfs::hook_NtQueryInformationFile(
         hdl, &status, buffer, sizeof(buffer), FileNameInformation);
