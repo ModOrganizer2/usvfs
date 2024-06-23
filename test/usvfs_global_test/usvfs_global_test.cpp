@@ -34,6 +34,28 @@ public:
   const auto& data() const { return m_data; }
 } parameters;
 
+// simple guard for handle
+class HandleGuard
+{
+  HANDLE m_handle = INVALID_HANDLE_VALUE;
+
+public:
+  HandleGuard() = default;
+  HandleGuard(HANDLE handle) : m_handle{handle} {}
+
+  ~HandleGuard() { close(); }
+
+  operator HANDLE() { return m_handle; }
+
+  void close()
+  {
+    if (m_handle != INVALID_HANDLE_VALUE) {
+      ::CloseHandle(m_handle);
+      m_handle = INVALID_HANDLE_VALUE;
+    }
+  }
+};
+
 // simple function to write content to a specified path
 void write_content(const std::filesystem::path& path, const std::string_view content)
 {
@@ -55,6 +77,27 @@ TEST(BasicTest, SimpleTest)
   ASSERT_TRUE(exists(data / "info.txt"));
   remove(data / "info.txt");
   ASSERT_FALSE(exists(data / "info.txt"));
+
+  {
+    const auto doc_txt = data / "docs" / "doc.txt";
+    HandleGuard hdl    = CreateFileW(doc_txt.c_str(), FILE_READ_ATTRIBUTES, 0, nullptr,
+                                     OPEN_EXISTING, FILE_FLAG_BACKUP_SEMANTICS, nullptr);
+    ASSERT_NE(INVALID_HANDLE_VALUE, (HANDLE)hdl);
+
+    WCHAR filepath[1024];
+    const auto length = GetFinalPathNameByHandleW(
+        hdl, filepath, sizeof(filepath) / sizeof(WCHAR), FILE_NAME_NORMALIZED);
+    const auto lastError = ::GetLastError();
+    ASSERT_NE(0, length) << "last error=" << ::GetLastError();
+
+    // we need to construct a new path because the format returned by
+    // GetFinalPathNameByHandleW is not really standardized (or is it?)
+
+    // TODO: more tests for this
+
+    ASSERT_EQ(data / "docs" / "doc.txt",
+              canonical(std::filesystem::path(std::wstring(filepath, length))));
+  }
 }
 
 // see https://github.com/ModOrganizer2/modorganizer/issues/2039 for context
