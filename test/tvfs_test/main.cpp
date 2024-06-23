@@ -424,6 +424,20 @@ TEST_F(USVFSTest, NtQueryObjectVirtualFile)
     ASSERT_EQ(0, wcscmp(fileNameInfo->FileName, L"\\np.exe"));
   }
 
+  // buffer of size should be too small for the original path (\Windows\notepad.exe)
+  // but not for \np.exe
+  {
+    char buffer[sizeof(ULONG) + 8 * 2];
+    IO_STATUS_BLOCK status;
+    const auto res = usvfs::hook_NtQueryInformationFile(
+        hdl, &status, buffer, sizeof(buffer), FileNormalizedNameInformation);
+    ASSERT_EQ(STATUS_SUCCESS, status.Status);
+
+    FILE_NAME_INFORMATION* fileNameInfo =
+        reinterpret_cast<FILE_NAME_INFORMATION*>(buffer);
+    ASSERT_EQ(0, wcscmp(fileNameInfo->FileName, L"\\np.exe"));
+  }
+
   {
     char buffer[2048];
     const auto res = usvfs::hook_NtQueryObject(hdl, ObjectNameInformation, buffer,
