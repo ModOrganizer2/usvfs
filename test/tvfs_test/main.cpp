@@ -465,6 +465,24 @@ TEST_F(USVFSTest, NtQueryObjectVirtualFile)
                            information->Name.Length / sizeof(wchar_t)));
   }
 
+  {
+    // expected length is sizeof struct + size of path (in bytes), including the
+    // null-character
+    const ULONG expectedLength =
+        sizeof(OBJECT_NAME_INFORMATION) + c_drive_device.size() * 2 + 12 + 2;
+    ULONG requiredLength;
+    NTSTATUS res;
+    char buffer[2048];
+      
+    res  = usvfs::hook_NtQueryObject(hdl, ObjectNameInformation, buffer, 8, &requiredLength);
+    ASSERT_EQ(STATUS_INFO_LENGTH_MISMATCH, res);
+    ASSERT_EQ(expectedLength, requiredLength);
+
+    res = usvfs::hook_NtQueryObject(hdl, ObjectNameInformation, buffer, sizeof(OBJECT_NAME_INFORMATION), &requiredLength);
+    ASSERT_EQ(STATUS_BUFFER_OVERFLOW, res);
+    ASSERT_EQ(expectedLength, requiredLength);
+  }
+
   usvfs::hook_NtClose(hdl);
 }
 

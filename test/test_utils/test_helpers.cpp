@@ -7,7 +7,7 @@
 
 namespace test {
 
-  std::string FuncFailed::msg(const char* func, const char* arg1, const unsigned long* res, const char* what)
+  std::string FuncFailed::msg(std::string_view func, const char* arg1, const unsigned long* res, const char* what)
   {
     std::string buffer;
     buffer.reserve(128);
@@ -22,6 +22,25 @@ namespace test {
       std::format_to(std::back_inserter(buffer), "{}result = {} ({:#x})", sep, *res, *res);
     }
     return buffer;
+  }
+
+
+  ScopedFILE ScopedFILE::open(const std::filesystem::path& filepath, std::wstring_view mode, errno_t& err) {
+    FILE* fp = nullptr;
+    err = _wfopen_s(&fp, filepath.c_str(), mode.data());
+    if (err || !fp) {
+      return ScopedFILE();
+    }
+    return ScopedFILE(fp);
+  }
+
+  ScopedFILE ScopedFILE::open(const std::filesystem::path& filepath, std::wstring_view mode) {
+    errno_t err;
+    auto file = open(filepath, mode, err);
+    if (err || !file) {
+      throw_testWinFuncFailed("_wfopen_s", filepath.string().c_str(), err);
+    }
+    return file;
   }
 
   path path_of_test_bin(const path& relative) {
@@ -85,10 +104,7 @@ namespace test {
   {
     using namespace std;
 
-    ScopedFILE f;
-    errno_t err = _wfopen_s(f, file.c_str(), binary ? L"rb" : L"rt");
-    if (err || !f)
-      throw_testWinFuncFailed("_wfopen_s", file.string().c_str(), err);
+    const auto f = ScopedFILE::open(file, binary ? L"rb" : L"rt");
 
     if (fseek(f, 0, SEEK_END))
       throw_testWinFuncFailed("fseek", (unsigned long) 0);
@@ -105,7 +121,7 @@ namespace test {
     std::vector<char> content(static_cast<size_t>(size));
     content.resize(fread(content.data(), sizeof(char), content.size(), f));
 
-    return std::move(content);
+    return content;
   }
 
   bool compare_files(const path& file1, const path& file2, bool binary)

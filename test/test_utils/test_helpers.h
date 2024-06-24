@@ -2,6 +2,8 @@
 
 #include "windows_sane.h"
 
+#include <format>
+#include <memory>
 #include <filesystem>
 
 namespace test
@@ -24,7 +26,7 @@ namespace test
         : std::runtime_error(msg(func, arg1, &res, what)) {}
 
   private:
-    std::string msg(const char *func, const char *arg1 = nullptr, const unsigned long *res = nullptr, const char *what = nullptr);
+    std::string msg(std::string_view func, const char *arg1 = nullptr, const unsigned long *res = nullptr, const char *what = nullptr);
   };
 
   class WinFuncFailed : public std::runtime_error
@@ -51,12 +53,12 @@ namespace test
       return WinFuncFailed(std::format("{} failed : result=({:#x}), lastError={}", func, res, m_gle));
     }
 
-    WinFuncFailed operator()(std::basic_string_view<char> func, std::basic_string_view<char> arg1)
+    WinFuncFailed operator()(std::string_view func, std::basic_string_view<char> arg1)
     {
       return WinFuncFailed(std::format("{} failed : {}, lastError={}", func, arg1, m_gle));
     }
 
-    WinFuncFailed operator()(std::basic_string_view<char> func, std::basic_string_view<char> arg1, unsigned long res)
+    WinFuncFailed operator()(std::string_view func, std::basic_string_view<char> arg1, unsigned long res)
     {
       return WinFuncFailed(std::format("{} failed : {}, result=({:#x}), lastError={}", func, arg1, res, m_gle));
     }
@@ -67,7 +69,7 @@ namespace test
 
   // trick to guarantee the evalutation of GetLastError() before the evalution of the parameters to the WinFuncFailed message generation
   template <class... Args>
-  [[noreturn]] void throw_testWinFuncFailed(std::basic_string_view<char> func, Args &&...args)
+  [[noreturn]] void throw_testWinFuncFailed(std::string_view func, Args &&...args)
   {
     ::test::WinFuncFailedGenerator exceptionGenerator;
     throw exceptionGenerator(func, std::forward<Args>(args)...);
@@ -76,30 +78,30 @@ namespace test
   class ScopedFILE
   {
   public:
-    ScopedFILE(FILE *f = nullptr) : m_f(f) {}
+    // try to open the given filepath with the given mode, if it fails, set err to
+    // the return code of _wfopen_s and return a nulled scoped file
+    //
+    static ScopedFILE open(const std::filesystem::path &filepath, std::wstring_view mode, errno_t &err);
+
+    // same as above but throw a WinFuncFailed() exception if opening the file failed
+    //
+    static ScopedFILE open(const std::filesystem::path &filepath, std::wstring_view mode);
+
+  public:
+    ScopedFILE(FILE *f = nullptr) : m_f(f, &fclose) {}
+
+    ScopedFILE(ScopedFILE &&other) noexcept = default;
+    ~ScopedFILE() = default;
+
     ScopedFILE(const ScopedFILE &) = delete;
-    ScopedFILE(ScopedFILE &&other) noexcept : m_f(other.m_f) { other.m_f = nullptr; }
-    ~ScopedFILE()
-    {
-      if (m_f)
-        fclose(m_f);
-    }
 
-    void close()
-    {
-      if (m_f)
-      {
-        fclose(m_f);
-        m_f = nullptr;
-      }
-    }
+    void close() { m_f = nullptr; }
 
-    operator bool() const { return m_f; }
-    operator FILE *() const { return m_f; }
-    operator FILE **() { return &m_f; }
+    operator bool() const { return static_cast<bool>(m_f); }
+    operator FILE *() const { return m_f.get(); }
 
   private:
-    FILE *m_f;
+    std::unique_ptr<FILE, decltype(&fclose)> m_f;
   };
 
   using std::filesystem::path;
