@@ -1066,10 +1066,13 @@ DLLEXPORT NTSTATUS WINAPI usvfs::hook_NtQueryObject(
   // we handle both SUCCESS and BUFFER_OVERFLOW since the fixed name might be
   // smaller than the original one
   //
-  // we do not handle STATUS_INFO_LENGTH_MISMATCH because this is only returned if 
-  // the length is too small to old the structure itself (regardless of the name)
+  // we only handle STATUS_INFO_LENGTH_MISMATCH if ReturnLength is not NULL since
+  // this is only returned if the length is too small to hold the structure itself 
+  // (regardless of the name), in which case, we need to compute our own ReturnLength
   // 
-  if ((res == STATUS_SUCCESS || res == STATUS_BUFFER_OVERFLOW)
+  if ((res == STATUS_SUCCESS 
+    || res == STATUS_BUFFER_OVERFLOW 
+    || (res == STATUS_INFO_LENGTH_MISMATCH && ReturnLength))
     && (ObjectInformationClass == ObjectNameInformation)) {
     const auto trackerInfo = ntdllHandleTracker.lookup(Handle);
     const auto redir       = applyReroute(READ_CONTEXT(), callContext, trackerInfo);
@@ -1097,7 +1100,11 @@ DLLEXPORT NTSTATUS WINAPI usvfs::hook_NtQueryObject(
       // sizeof(OBJECT_NAME_INFORMATION) + the number of bytes for the name + 2 bytes for a wide null character
       const auto requiredLength = sizeof(OBJECT_NAME_INFORMATION) + buffer.size() * 2 + 2;
       if (ObjectInformationLength < requiredLength) {
-        res = STATUS_BUFFER_OVERFLOW;
+        // if the status was info length mismatch, we keep it, we are just going to update
+        // *ReturnLength
+        if (res != STATUS_INFO_LENGTH_MISMATCH) {
+          res = STATUS_BUFFER_OVERFLOW;
+        }
 
         if (ReturnLength) {
           *ReturnLength = requiredLength;
@@ -1166,11 +1173,10 @@ DLLEXPORT NTSTATUS WINAPI usvfs::hook_NtQueryInformationFile(
   // because most of the structures would need to be manually filled, which is very
   // complicated - this should not pose huge issue
   // 
-  if ((res == STATUS_SUCCESS || res == STATUS_BUFFER_OVERFLOW) &&
-      (FileInformationClass == FileNameInformation 
-    || FileInformationClass == FileAllInformation 
-    || FileInformationClass == FileNormalizedNameInformation) &&
-      !(FileInformationClass == FileAllInformation && res == STATUS_BUFFER_OVERFLOW)) {
+  if (((res == STATUS_SUCCESS || res == STATUS_BUFFER_OVERFLOW) &&
+      (FileInformationClass == FileNameInformation ||
+       FileInformationClass == FileNormalizedNameInformation)) ||
+      (res == STATUS_SUCCESS && FileInformationClass == FileAllInformation)) {
 
     const auto trackerInfo = ntdllHandleTracker.lookup(FileHandle);
     const auto redir = applyReroute(READ_CONTEXT(), callContext, trackerInfo);
