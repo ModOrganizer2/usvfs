@@ -474,7 +474,7 @@ TEST_F(USVFSTest, NtQueryObjectVirtualFile)
     NTSTATUS res;
     char buffer[2048];
       
-    res  = usvfs::hook_NtQueryObject(hdl, ObjectNameInformation, buffer, 8, &requiredLength);
+    res  = usvfs::hook_NtQueryObject(hdl, ObjectNameInformation, buffer, sizeof(OBJECT_NAME_INFORMATION) - 1, &requiredLength);
     ASSERT_EQ(STATUS_INFO_LENGTH_MISMATCH, res);
     ASSERT_EQ(expectedLength, requiredLength);
 
