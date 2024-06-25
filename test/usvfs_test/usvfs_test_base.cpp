@@ -100,13 +100,10 @@ public:
   using path = test::path;
 
   usvfs_connector(const usvfs_test_options& options)
-    : m_exit_future(m_exit_signal.get_future())
+    : m_usvfs_log(test::ScopedFILE::open(options.usvfs_log, L"wt")),
+      m_exit_future(m_exit_signal.get_future())
   {
     winapi::ex::wide::createPath(options.usvfs_log.parent_path().c_str());
-
-    errno_t err = _wfopen_s(m_usvfs_log, options.usvfs_log.c_str(), L"wt");
-    if (err || !m_usvfs_log)
-      throw_testWinFuncFailed("_wfopen_s", options.usvfs_log.string().c_str(), err);
 
     std::wcout << "Connecting VFS..." << std::endl;
 
@@ -273,11 +270,7 @@ public:
 
   mappings_list read(const path& mapfile)
   {
-    test::ScopedFILE map;
-    errno_t err = _wfopen_s(map, mapfile.c_str(), L"rt");
-    if (err || !map)
-      throw_testWinFuncFailed("_wfopen_s", mapfile.string().c_str(), err);
-
+    const auto map = test::ScopedFILE::open(mapfile, L"rt");
     mappings_list mappings;
 
     char line[1024];
@@ -564,10 +557,7 @@ bool usvfs_test_base::recursive_compare_dirs(path rel_path, path gold_base, path
 
 test::ScopedFILE usvfs_test_base::output()
 {
-  test::ScopedFILE log;
-  errno_t err = _wfopen_s(log, m_o.output.c_str(), m_clean_output ? L"wt" : L"at");
-  if (err || !log)
-    throw_testWinFuncFailed("_wfopen_s", m_o.output.string().c_str(), err);
+  auto log = test::ScopedFILE::open(m_o.output, m_clean_output ? L"wt" : L"at");
   m_clean_output = false;
   return log;
 }
@@ -576,8 +566,8 @@ void usvfs_test_base::clean_output()
 {
   using namespace std;
 
-  test::ScopedFILE in;
-  errno_t err = _wfopen_s(in, m_o.output.c_str(), L"rt");
+  errno_t err;
+  auto in = test::ScopedFILE::open(m_o.output, L"rt", err);
   if (err == ENOENT) {
     wcerr << L"warning: no " << m_o.output << L" to clean." << endl;
     return;
@@ -585,14 +575,11 @@ void usvfs_test_base::clean_output()
   else if (err || !in)
     throw_testWinFuncFailed("_wfopen_s", m_o.output.string().c_str(), err);
 
-  test::ScopedFILE out;
   path clean = m_o.output.parent_path() / m_o.output.stem();
   clean += OUTPUT_CLEAN_SUFFIX;
   clean += m_o.output.extension();
-  err = _wfopen_s(out, clean.c_str(), L"wt");
-  if (err || !in)
-    throw_testWinFuncFailed("_wfopen_s", clean.string().c_str(), err);
 
+  auto out = test::ScopedFILE::open(clean, L"wt");
   wcout << L"Cleaning " << m_o.output << " to " << clean << endl;
 
   char line[1024];

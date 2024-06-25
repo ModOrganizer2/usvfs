@@ -267,6 +267,8 @@ void HookManager::initHooks()
   installHook(ntdllMod, nullptr, "NtQueryAttributesFile", hook_NtQueryAttributesFile);
   installHook(ntdllMod, nullptr, "NtQueryDirectoryFile", hook_NtQueryDirectoryFile);
   installHook(ntdllMod, nullptr, "NtQueryDirectoryFileEx", hook_NtQueryDirectoryFileEx);
+  installHook(ntdllMod, nullptr, "NtQueryObject", hook_NtQueryObject);
+  installHook(ntdllMod, nullptr, "NtQueryInformationFile", hook_NtQueryInformationFile);
   installHook(ntdllMod, nullptr, "NtOpenFile", hook_NtOpenFile);
   installHook(ntdllMod, nullptr, "NtCreateFile", hook_NtCreateFile);
   installHook(ntdllMod, nullptr, "NtClose", hook_NtClose);

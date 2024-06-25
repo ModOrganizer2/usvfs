@@ -56,43 +56,46 @@ jobs:
             "-property:RunCodeAnalysis=false" `
             .\vsbuild\usvfs.sln
 
-      - if: matrix.tests == 'Test' && matrix.config == 'Debug'
+      - if: matrix.tests == 'Test'
         uses: actions/upload-artifact@master
         with:
-          name: usvfs-libs_${{ matrix.arch }}
+          name: usvfs-libs_${{ matrix.arch }}_${{ matrix.config }}
           path: ./lib
-      - if: matrix.tests == 'Test' && matrix.config == 'Debug'
+      - if: matrix.tests == 'Test'
         uses: actions/upload-artifact@master
         with:
-          name: usvfs-bins_${{ matrix.arch }}
+          name: usvfs-bins_${{ matrix.arch }}_${{ matrix.config }}
           path: ./bin
-      - if: matrix.tests == 'Test' && matrix.config == 'Debug'
+      - if: matrix.tests == 'Test'
         uses: actions/upload-artifact@master
         with:
-          name: usvfs-tests_${{ matrix.arch }}
+          name: usvfs-tests_${{ matrix.arch }}_${{ matrix.config }}
           path: ./test/bin
 
   # merge x86 / x64 artifacts
   merge-artifacts:
     runs-on: ubuntu-latest
     name: Merge Artifacts for Tests
+    strategy:
+      matrix:
+        config: [Debug, Release]
     needs: build
     steps:
       - name: Merge USVFS libs
         uses: actions/upload-artifact/merge@v4
         with:
-          name: usvfs-libs
-          pattern: usvfs-libs_*
+          name: usvfs-libs_${{ matrix.config }}
+          pattern: usvfs-libs_*_${{ matrix.config }}
       - name: Merge USVFS bins
         uses: actions/upload-artifact/merge@v4
         with:
-          name: usvfs-bins
-          pattern: usvfs-bins_*
+          name: usvfs-bins_${{ matrix.config }}
+          pattern: usvfs-bins_*_${{ matrix.config }}
       - name: Merge USVFS tests
         uses: actions/upload-artifact/merge@v4
         with:
-          name: usvfs-tests
-          pattern: usvfs-tests_*
+          name: usvfs-tests_${{ matrix.config }}
+          pattern: usvfs-tests_*_${{ matrix.config }}
 
   test:
     name: Test USVFS
@@ -101,19 +104,20 @@ jobs:
     strategy:
       matrix:
         arch: [x86, x64]
+        config: [Debug, Release]
     steps:
       - uses: actions/checkout@v4
       - uses: actions/download-artifact@master
         with:
-          name: usvfs-libs
+          name: usvfs-libs_${{ matrix.config }}
           path: ./lib
       - uses: actions/download-artifact@master
         with:
-          name: usvfs-bins
+          name: usvfs-bins_${{ matrix.config }}
           path: ./bin
       - uses: actions/download-artifact@master
         with:
-          name: usvfs-tests
+          name: usvfs-tests_${{ matrix.config }}
           path: ./test/bin
       - run: ./test/bin/shared_test_${{ matrix.arch }}.exe
         if: always()
@@ -127,10 +131,12 @@ jobs:
         if: always()
       - run: ./test/bin/usvfs_test_runner_${{ matrix.arch }}.exe
         if: always()
+      - run: ./test/bin/usvfs_global_test_runner_${{ matrix.arch }}.exe
+        if: always()
       - uses: actions/upload-artifact@master
         if: always()
         with:
-          name: tests-outputs_${{ matrix.arch }}
+          name: tests-outputs_${{ matrix.arch }}_${{ matrix.config }}
           path: ./test/temp
           if-no-files-found: ignore
           retention-days: 7

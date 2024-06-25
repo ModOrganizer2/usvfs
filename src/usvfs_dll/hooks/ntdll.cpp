@@ -331,11 +331,6 @@ void GetInfoData(LPCVOID address, FILE_INFORMATION_CLASS infoClass,
 template <typename T>
 void SetInfoFilenameImpl(T *info, const std::wstring &fileName)
 {
-  // not sure if the filename is supposed to be zero terminated but I did get
-  // invalid
-  // filenames when the buffer wasn't zeroed
-  memset(info->FileName, L'\0', info->FileNameLength);
-
   info->FileNameLength = static_cast<ULONG>(fileName.length() * sizeof(WCHAR));
   memcpy(info->FileName, fileName.c_str(), info->FileNameLength + 1);
 }
@@ -372,6 +367,10 @@ void SetInfoFilename(LPVOID address, FILE_INFORMATION_CLASS infoClass,
                      const std::wstring &fileName)
 {
   switch (infoClass) {
+    case FileAllInformation: {
+      SetInfoFilenameImpl(
+        &reinterpret_cast<FILE_ALL_INFORMATION*>(address)->NameInformation, fileName);
+    } break;
     case FileBothDirectoryInformation: {
       SetInfoFilenameImplSN(
           reinterpret_cast<FILE_BOTH_DIR_INFORMATION *>(address), fileName);
@@ -380,9 +379,17 @@ void SetInfoFilename(LPVOID address, FILE_INFORMATION_CLASS infoClass,
       SetInfoFilenameImpl(
           reinterpret_cast<FILE_DIRECTORY_INFORMATION *>(address), fileName);
     } break;
+    case FileNameInformation: {
+      SetInfoFilenameImpl(
+        reinterpret_cast<FILE_NAME_INFORMATION*>(address), fileName);
+    } break;
     case FileNamesInformation: {
-      SetInfoFilenameImpl(reinterpret_cast<FILE_NAMES_INFORMATION *>(address),
-                          fileName);
+      SetInfoFilenameImpl(
+        reinterpret_cast<FILE_NAMES_INFORMATION *>(address), fileName);
+    } break;
+    case FileNormalizedNameInformation: {
+      SetInfoFilenameImpl(
+        reinterpret_cast<FILE_NAME_INFORMATION*>(address), fileName);
     } break;
     case FileIdFullDirectoryInformation: {
       SetInfoFilenameImpl(
@@ -394,8 +401,7 @@ void SetInfoFilename(LPVOID address, FILE_INFORMATION_CLASS infoClass,
     } break;
     case FileIdBothDirectoryInformation: {
       SetInfoFilenameImplSN(
-          reinterpret_cast<FILE_ID_BOTH_DIR_INFORMATION *>(address),
-          fileName);
+          reinterpret_cast<FILE_ID_BOTH_DIR_INFORMATION *>(address), fileName);
     } break;
     default: {
       // NOP
@@ -1034,6 +1040,198 @@ NTSTATUS WINAPI usvfs::hook_NtQueryDirectoryFileEx(
       .PARAM(QueryFlags)
       .PARAM(numVirtualFiles)
       .PARAMWRAP(res);
+  }
+
+  HOOK_END
+  return res;
+}
+
+DLLEXPORT NTSTATUS WINAPI usvfs::hook_NtQueryObject(
+  HANDLE Handle, OBJECT_INFORMATION_CLASS ObjectInformationClass,
+  PVOID ObjectInformation, ULONG ObjectInformationLength, PULONG ReturnLength)
+{
+  NTSTATUS res;
+
+  HOOK_START_GROUP(MutExHookGroup::FILE_ATTRIBUTES)
+  if (!callContext.active()) {
+    return ::NtQueryObject(Handle, ObjectInformationClass, ObjectInformation,
+      ObjectInformationLength, ReturnLength);
+  }
+
+  PRE_REALCALL
+  res = ::NtQueryObject(Handle, ObjectInformationClass, ObjectInformation,
+                        ObjectInformationLength, ReturnLength);
+  POST_REALCALL
+
+  // we handle both SUCCESS and BUFFER_OVERFLOW since the fixed name might be
+  // smaller than the original one
+  //
+  // we only handle STATUS_INFO_LENGTH_MISMATCH if ReturnLength is not NULL since
+  // this is only returned if the length is too small to hold the structure itself 
+  // (regardless of the name), in which case, we need to compute our own ReturnLength
+  // 
+  if ((res == STATUS_SUCCESS 
+    || res == STATUS_BUFFER_OVERFLOW 
+    || (res == STATUS_INFO_LENGTH_MISMATCH && ReturnLength))
+    && (ObjectInformationClass == ObjectNameInformation)) {
+    const auto trackerInfo = ntdllHandleTracker.lookup(Handle);
+    const auto redir       = applyReroute(READ_CONTEXT(), callContext, trackerInfo);
+
+    OBJECT_NAME_INFORMATION* info =
+        reinterpret_cast<OBJECT_NAME_INFORMATION*>(ObjectInformation);
+   
+    if (redir.redirected) {
+      // https://learn.microsoft.com/en-us/windows/win32/fileio/displaying-volume-paths
+      // 
+      
+      // TODO: is that always true?
+      // path should start with \??\X: - we need to replace this by device name
+      //
+      WCHAR deviceName[MAX_PATH];
+      std::wstring buffer(static_cast<LPCWSTR>(trackerInfo));
+      buffer[6] = L'\0';
+
+      const auto charCount = QueryDosDeviceW(buffer.data() + 4, deviceName, ARRAYSIZE(deviceName)); 
+
+      buffer =
+          std::wstring(deviceName) + L'\\' + std::wstring(buffer.data() + 7, buffer.size() - 7);
+
+      // the name is put in the buffer AFTER the struct, so the required size if 
+      // sizeof(OBJECT_NAME_INFORMATION) + the number of bytes for the name + 2 bytes for a wide null character
+      const auto requiredLength = sizeof(OBJECT_NAME_INFORMATION) + buffer.size() * 2 + 2;
+      if (ObjectInformationLength < requiredLength) {
+        // if the status was info length mismatch, we keep it, we are just going to update
+        // *ReturnLength
+        if (res != STATUS_INFO_LENGTH_MISMATCH) {
+          res = STATUS_BUFFER_OVERFLOW;
+        }
+
+        if (ReturnLength) {
+          *ReturnLength = requiredLength;
+        }
+      } else {
+        // put the unicode buffer at the end of the object
+        const auto unicodeBufferLength =
+            ObjectInformationLength - sizeof(OBJECT_NAME_INFORMATION);
+        LPWSTR unicodeBuffer = reinterpret_cast<LPWSTR>(
+          static_cast<LPSTR>(ObjectInformation) + sizeof(OBJECT_NAME_INFORMATION));
+
+        // copy the path into the buffer
+        wmemcpy(unicodeBuffer, buffer.data(), buffer.size());
+
+        // set the null character
+        unicodeBuffer[buffer.size()] = L'\0';
+
+        // update the actual unicode string
+        info->Name.Buffer        = unicodeBuffer;
+        info->Name.Length        = buffer.size() * 2;
+        info->Name.MaximumLength = unicodeBufferLength;
+
+        res                      = STATUS_SUCCESS;
+      }
+    }
+
+    LOG_CALL()
+        .PARAMWRAP(res)
+        .PARAM(ObjectInformationLength)
+        .addParam("return_length", ReturnLength ? *ReturnLength : -1)
+        .addParam("tracker_path", trackerInfo)
+        .PARAM(ObjectInformationClass)
+        .PARAM(redir.redirected)
+        .PARAM(redir.path)
+        .addParam("name_info", info->Name);
+  }
+
+  HOOK_END
+  return res;
+}
+
+DLLEXPORT NTSTATUS WINAPI usvfs::hook_NtQueryInformationFile(
+  HANDLE FileHandle, PIO_STATUS_BLOCK IoStatusBlock, PVOID FileInformation,
+  ULONG Length, FILE_INFORMATION_CLASS FileInformationClass)
+{
+  NTSTATUS res;
+
+  HOOK_START_GROUP(MutExHookGroup::FILE_ATTRIBUTES)
+  if (!callContext.active()) {
+    return ::NtQueryInformationFile(FileHandle, IoStatusBlock, FileInformation, 
+      Length, FileInformationClass);
+  }
+
+  PRE_REALCALL
+  res = ::NtQueryInformationFile(FileHandle, IoStatusBlock, FileInformation, Length,
+                                 FileInformationClass);
+  POST_REALCALL
+
+  // we handle both SUCCESS and BUFFER_OVERFLOW since the fixed name might be
+  // smaller than the original one
+  //
+  // we do not handle STATUS_INFO_LENGTH_MISMATCH because this is only returned if
+  // the length is too small to old the structure itself (regardless of the name)
+  // 
+  // TODO: currently, this does not handle STATUS_BUFFER_OVERLOW for ALL information
+  // because most of the structures would need to be manually filled, which is very
+  // complicated - this should not pose huge issue
+  // 
+  if (((res == STATUS_SUCCESS || res == STATUS_BUFFER_OVERFLOW) &&
+      (FileInformationClass == FileNameInformation ||
+       FileInformationClass == FileNormalizedNameInformation)) ||
+      (res == STATUS_SUCCESS && FileInformationClass == FileAllInformation)) {
+
+    const auto trackerInfo = ntdllHandleTracker.lookup(FileHandle);
+    const auto redir = applyReroute(READ_CONTEXT(), callContext, trackerInfo);
+
+    // TODO: difference between FileNameInformation and FileNormalizedNameInformation
+
+    // maximum length in bytes - the required length is
+    // - for ALL, 100 + the number of bytes in the name (not account for null character)
+    // - for NAME, 4 + the number of bytes in the name (not accounting for null character)
+    //
+    // it is close to the sizeof the structure + the number of bytes in the name, except 
+    // for the alignment that gives us a bit more space
+    //
+    ULONG prefixStructLength;
+    FILE_NAME_INFORMATION *info;
+    if (FileInformationClass == FileAllInformation) {
+      info = &reinterpret_cast<FILE_ALL_INFORMATION*>(FileInformation)->NameInformation;
+      prefixStructLength = sizeof(FILE_ALL_INFORMATION) - 4;
+    } else {
+      info        = reinterpret_cast<FILE_NAME_INFORMATION*>(FileInformation);
+      prefixStructLength = sizeof(FILE_NAME_INFORMATION) - 4;
+    }
+
+    if (redir.redirected)
+    {
+      auto requiredLength = prefixStructLength + 2 * (trackerInfo.size() - 6);
+      if (Length < requiredLength) {
+        res = STATUS_BUFFER_OVERFLOW;
+      } else {
+        // strip the \??\X: prefix (X being the drive name)
+        LPCWSTR filenameFixed = static_cast<LPCWSTR>(trackerInfo) + 6;
+
+        // not using SetInfoFilename because the length is not set and we do not need to 
+        // 0-out the memory here
+        info->FileNameLength = (trackerInfo.size() - 6) * 2;
+        wmemcpy(info->FileName, filenameFixed, trackerInfo.size() - 6);
+        res = STATUS_SUCCESS;
+
+        // update status block, Information is the number of bytes written, basically
+        // the required length
+        IoStatusBlock->Status = STATUS_SUCCESS;
+        IoStatusBlock->Information = static_cast<ULONG_PTR>(requiredLength);
+      }
+    }
+
+    LOG_CALL()
+      .PARAMWRAP(res)
+      .addParam("tracker_path", trackerInfo)
+      .PARAM(FileInformationClass)
+      .PARAM(redir.redirected)
+      .PARAM(redir.path)
+      .addParam("name_info", res == STATUS_SUCCESS ? std::wstring{info->FileName,
+                                                  info->FileNameLength / sizeof(WCHAR)}
+                                   : std::wstring{});
+
   }
 
   HOOK_END
