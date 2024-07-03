@@ -5,5 +5,6 @@ source_group("" FILES ${sources})
 
 add_library(usvfs_helper STATIC ${sources})
 target_link_libraries(usvfs_helper PRIVATE shared tinjectlib)
+target_include_directories(usvfs_helper PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
 set_target_properties(usvfs_helper PROPERTIES FOLDER injection)
 # target_precompile_headers(shared PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/../shared/pch.h)

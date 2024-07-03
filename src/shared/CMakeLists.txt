@@ -1,13 +1,15 @@
 cmake_minimum_required(VERSION 3.16)
 
-find_package(Boost CONFIG REQUIRED COMPONENTS algorithm interprocess)
+find_package(Boost CONFIG REQUIRED COMPONENTS algorithm interprocess filesystem)
 find_package(spdlog CONFIG REQUIRED)
 
 file(GLOB sources "*.cpp" "*.h")
 source_group("" FILES ${sources})
 
 add_library(shared STATIC ${sources})
-target_link_libraries(shared PUBLIC Boost Boost::algorithm Boost::interprocess spdlog::spdlog)
+target_link_libraries(shared
+    PUBLIC
+    Boost::algorithm Boost::interprocess Boost::filesystem spdlog::spdlog)
 target_include_directories(shared
     PUBLIC ${PROJECT_SOURCE_DIR}/include ${CMAKE_CURRENT_SOURCE_DIR})
 target_precompile_headers(shared PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/pch.h)

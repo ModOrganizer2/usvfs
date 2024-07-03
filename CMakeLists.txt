@@ -10,3 +10,6 @@ add_subdirectory(src/shared)
 add_subdirectory(src/thooklib)
 add_subdirectory(src/tinjectlib)
 add_subdirectory(src/usvfs_helper)
+
+add_subdirectory(src/usvfs_dll)
+add_subdirectory(src/usvfs_proxy)
