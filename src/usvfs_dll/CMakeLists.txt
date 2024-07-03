@@ -13,7 +13,7 @@ add_library(usvfs_dll SHARED ${sources} ${hooks})
 target_link_libraries(usvfs_dll
     PUBLIC shared thooklib usvfs_helper
     Boost::thread spdlog::spdlog_header_only
-    Shlwapi comsuppw)
+    Shlwapi)
 target_include_directories(usvfs_dll PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
 target_compile_definitions(usvfs_dll PRIVATE BUILDING_USVFS_DLL)
 set_target_properties(usvfs_dll
