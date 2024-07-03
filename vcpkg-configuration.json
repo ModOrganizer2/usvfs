@@ -18,7 +18,7 @@
       "kind": "filesystem",
       "baseline": "asmjit-fb9f82c",
       "path": "./vcpkg-registry",
-      "packages": [ ]
+      "packages": [ "asmjit" ]
     }
   ],
   "overlay-triplets": [

@@ -23,7 +23,7 @@ along with usvfs. If not, see <http://www.gnu.org/licenses/>.
 #include <boost/format.hpp>
 #include "udis86wrapper.h"
 #pragma warning (push, 3)
-#include "asmjit.h"
+#include <asmjit/asmjit.h>
 #pragma warning (pop)
 #include "hooklib.h"
 #include "utility.h"

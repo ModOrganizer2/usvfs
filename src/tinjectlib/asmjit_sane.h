@@ -27,6 +27,6 @@ along with usvfs. If not, see <http://www.gnu.org/licenses/>.
 //#ifndef ASMJIT_API
 //#define ASMJIT_API
 //#endif // ASMJIT_API
-#include <asmjit.h>
-#include <x86.h>
+#include <asmjit/asmjit.h>
+#include <asmjit/x86.h>
 #pragma warning (pop)

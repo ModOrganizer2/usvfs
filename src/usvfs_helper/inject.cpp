@@ -26,7 +26,7 @@ along with usvfs. If not, see <http://www.gnu.org/licenses/>.
 #include <boost/filesystem.hpp>
 
 #include <pch.h>
-#include <inject.h>
+#include "inject.h"
 #include <usvfsparametersprivate.h>
 #include <winapi.h>
 #include <exceptionex.h>

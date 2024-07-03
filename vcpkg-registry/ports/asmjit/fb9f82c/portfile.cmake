@@ -23,9 +23,9 @@ vcpkg_cmake_config_fixup(CONFIG_PATH lib/cmake/asmjit)
 
 file(REMOVE_RECURSE "${CURRENT_PACKAGES_DIR}/debug/include")
 
-vcpkg_replace_string("${CURRENT_PACKAGES_DIR}/include/asmjit/core/api-config.h"
-    "#if !defined(ASMJIT_STATIC)"
-    "#if 0"
-)
+# vcpkg_replace_string("${CURRENT_PACKAGES_DIR}/include/asmjit/core/api-config.h"
+#     "#if !defined(ASMJIT_STATIC)"
+#     "#if 0"
+# )
 
 vcpkg_install_copyright(FILE_LIST "${SOURCE_PATH}/LICENSE.md")

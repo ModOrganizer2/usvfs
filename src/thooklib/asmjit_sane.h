@@ -24,6 +24,6 @@ along with usvfs. If not, see <http://www.gnu.org/licenses/>.
 #pragma warning(disable : 4201)
 #pragma warning(disable : 4244)
 #pragma warning(disable : 4245)
-#include <asmjit.h>
-#include <x86.h>
+#include <asmjit/asmjit.h>
+#include <asmjit/x86.h>
 #pragma warning (pop)

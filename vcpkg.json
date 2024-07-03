@@ -17,7 +17,8 @@
     "boost-headers",
     "boost-locale",
     "boost-multi-index",
-    "boost-thread"
+    "boost-thread",
+    "boost-predef"
   ],
   "features": {
     "tests": {
