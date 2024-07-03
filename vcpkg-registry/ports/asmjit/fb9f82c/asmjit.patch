@@ -1,0 +1,15 @@
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+index 37061c9..7b5f9d6 100644
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -220,9 +220,7 @@ macro(asmjit_add_library _target _src _deps _cflags _cflags_dbg _cflags_rel)
+       $<$<NOT:$<CONFIG:Debug>>:${_cflags_rel}>)
+   endif()
+ 
+-  if(NOT ASMJIT_STATIC)
+-    install(TARGETS ${_target} DESTINATION "lib${LIB_SUFFIX}")
+-  endif()
++  install(TARGETS ${_target} DESTINATION "lib${LIB_SUFFIX}")
+ endmacro()
+ 
+ # =============================================================================

@@ -1,9 +1,0 @@
-[submodule "asmjit"]
-	path = asmjit
-	url = https://github.com/asmjit/asmjit.git
-[submodule "udis86"]
-	path = udis86
-	url = https://github.com/ModOrganizer2/udis86
-[submodule "spdlog"]
-	path = spdlog
-	url = https://github.com/gabime/spdlog.git

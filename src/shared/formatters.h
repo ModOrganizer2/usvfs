@@ -75,7 +75,9 @@ struct std::formatter<PCUNICODE_STRING, char> : std::formatter<std::string, char
 };
 
 template <class Pointer>
-  requires (std::is_pointer_v<Pointer> 
+  requires (std::is_pointer_v<Pointer>
+    && !std::is_same_v<Pointer, const char*>
+    && !std::is_same_v<Pointer, char*>
     && !std::is_same_v<Pointer, const void*> 
     && !std::is_same_v<Pointer, void*>)
 struct std::formatter<Pointer, char> : std::formatter<const void*, char>

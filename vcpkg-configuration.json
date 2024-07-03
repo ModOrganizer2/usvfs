@@ -1,0 +1,27 @@
+{
+  "default-registry": {
+    "kind": "git",
+    "repository": "https://github.com/Microsoft/vcpkg",
+    "baseline": "f61a294e765b257926ae9e9d85f96468a0af74e7"
+  },
+  "registries": [
+    {
+      "kind": "git",
+      "repository": "https://github.com/Microsoft/vcpkg",
+      "baseline": "f61a294e765b257926ae9e9d85f96468a0af74e7",
+      "packages": [
+        "boost*",
+        "boost-*"
+      ]
+    },
+    {
+      "kind": "filesystem",
+      "baseline": "asmjit-fb9f82c",
+      "path": "./vcpkg-registry",
+      "packages": [ ]
+    }
+  ],
+  "overlay-triplets": [
+    "./vcpkg-triplets"
+  ]
+}
