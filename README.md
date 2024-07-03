@@ -1,14 +1,13 @@
 # usvfs
 
 [![License](http://img.shields.io/:license-gpl-blue.svg)](http://www.gnu.org/licenses/gpl-3.0.en.html)
-[![Build status](https://ci.appveyor.com/api/projects/status/rfc2xe8mo9775smo?svg=true)](https://ci.appveyor.com/project/Modorganizer2/usvfs)
-[![Coverity Scan Build Status](https://scan.coverity.com/projects/8941/badge.svg)](https://scan.coverity.com/projects/8941)
+[![Build status](https://github.com/github/docs/actions/workflows/build.yml/badge.svg)](https://github.com/ModOrganizer2/usvfs/actions)
 
 USVFS (short for User Space Virtual File System) aims to allow windows applications to create file or directory links that
 are visible to only a select set of processes.
 It does so by using api hooking to fool file access functions into discovering/opening files that are in fact somewhere else
 
-# Comparison to symbolic links
+## Comparison to symbolic links
 
 The following is based on the final goal for usvfs and doesn't necessary reflect the current development state.
 
@@ -27,16 +26,29 @@ There are of course drawbacks
 - introduces a new source of bugs that can cause hard to diagnose problems in affected processes
 - may rub antivirus software the wrong way as the used techniques are similar to what some malware does.
 
-# Current state
+## Current state
 
 usvfs is work in progress and should be considered in alpha state.
-It is a core component of Mod Organizer v2 <https://github.com/ModOrganizer2/modorganizer> and thus receives serious real world testing
+It is a core component of Mod Organizer v2 <https://github.com/ModOrganizer2/modorganizer>
+and thus receives serious real world testing
 
-# License
+## Building
+
+You will `cmake`, Python 3+ and `vcpkg` to build USVFS:
+
+```pwsh
+cmake -B build32 -A Win32 "-DCMAKE_TOOLCHAIN_FILE=path\to\vcpkg\scripts\buildsystems\vcpkg.cmake" -DBUILD_USVFS_TESTS=TRUE
+cmake --build build32 --config Release
+
+cmake -B build64 -A Win64 "-DCMAKE_TOOLCHAIN_FILE=path\to\vcpkg\scripts\buildsystems\vcpkg.cmake" -DBUILD_USVFS_TESTS=TRUE
+cmake --build build64 --config Release
+```
+
+## License
 
 usvfs is currently licensed under the GPLv3 but this may change in the future.
 
-# Contributing
+## Contributing
 
-Contributions are very welcome but please notice that since I'm still undecided on licensing I have to ask all contributors to agree
-to future licensing changes.
+Contributions are very welcome but please notice that since I'm still undecided on
+licensing I have to ask all contributors to agree to future licensing changes.
