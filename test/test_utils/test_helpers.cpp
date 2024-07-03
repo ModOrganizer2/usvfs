@@ -1,7 +1,5 @@
 #pragma once
 
-#if USVFS_BUILD_TESTS
-
 #include <format>
 
 #include "test_helpers.h"
@@ -222,5 +220,3 @@ namespace test {
   }
 
 };
-
-#endif

@@ -4,5 +4,9 @@ find_package(Boost CONFIG REQUIRED COMPONENTS filesystem)
 
 add_executable(usvfs_proxy main.cpp)
 target_link_libraries(usvfs_proxy PRIVATE usvfs_dll shared usvfs_helper)
-# set_target_properties(usvfs_helper PROPERTIES FOLDER injection)
-# target_precompile_headers(shared PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/../shared/pch.h)
+set_target_properties(usvfs_proxy
+    PROPERTIES
+    RUNTIME_OUTPUT_NAME usvfs_proxy${ARCH_POSTFIX}
+    RUNTIME_OUTPUT_DIRECTORY_DEBUG ${USVFS_BINDIR}
+    RUNTIME_OUTPUT_DIRECTORY_RELEASE ${USVFS_BINDIR}
+)

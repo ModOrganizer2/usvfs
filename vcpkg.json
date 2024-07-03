@@ -3,9 +3,7 @@
     "asmjit",
     {
       "name": "spdlog",
-      "features": [
-        "wchar"
-      ]
+      "features": ["wchar"]
     },
     "libudis86",
     "boost-algorithm",
@@ -21,11 +19,9 @@
     "boost-predef"
   ],
   "features": {
-    "tests": {
+    "testing": {
       "description": "Build USVFS tests.",
-      "dependencies": [
-        "gtest"
-      ]
+      "dependencies": ["gtest"]
     }
   }
 }
