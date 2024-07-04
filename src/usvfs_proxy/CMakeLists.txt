@@ -12,4 +12,4 @@ set_target_properties(usvfs_proxy
     RUNTIME_OUTPUT_DIRECTORY_RELEASE ${USVFS_BINDIR}
 )
 
-install(TARGETS usvfs_proxy)
+install(TARGETS usvfs_proxy EXPORT usvfs${ARCH_POSTFIX}Targets)

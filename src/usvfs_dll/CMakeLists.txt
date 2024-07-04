@@ -47,8 +47,9 @@ set_target_properties(usvfs_dll
     RUNTIME_OUTPUT_DIRECTORY_DEBUG ${USVFS_LIBDIR}
     RUNTIME_OUTPUT_DIRECTORY_RELEASE ${USVFS_LIBDIR})
 
-install(TARGETS usvfs_dll EXPORT usvfsTargets FILE_SET HEADERS)
-install(EXPORT usvfsTargets
-    FILE usvfsTargets.cmake
+install(TARGETS usvfs_dll EXPORT usvfs${ARCH_POSTFIX}Targets FILE_SET HEADERS)
+install(EXPORT usvfs${ARCH_POSTFIX}Targets
+    FILE usvfs${ARCH_POSTFIX}Targets.cmake
+    NAMESPACE usvfs${ARCH_POSTFIX}::
     DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/usvfs
 )
