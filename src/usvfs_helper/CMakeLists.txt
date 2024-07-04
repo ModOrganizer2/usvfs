@@ -1,10 +1,7 @@
 cmake_minimum_required(VERSION 3.16)
 
-file(GLOB sources "*.cpp" "*.h")
-source_group("" FILES ${sources})
-
-add_library(usvfs_helper STATIC ${sources})
-target_link_libraries(usvfs_helper PRIVATE shared tinjectlib)
+add_library(usvfs_helper STATIC inject.h inject.cpp)
+usvfs_configure_target(usvfs_helper)
+target_link_libraries(usvfs_helper PUBLIC shared PRIVATE tinjectlib)
 target_include_directories(usvfs_helper PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
 set_target_properties(usvfs_helper PROPERTIES FOLDER injection)
-# target_precompile_headers(shared PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/../shared/pch.h)

@@ -2,7 +2,8 @@ cmake_minimum_required(VERSION 3.16)
 
 find_package(Boost CONFIG REQUIRED COMPONENTS filesystem)
 
-add_executable(usvfs_proxy main.cpp)
+add_executable(usvfs_proxy main.cpp version.rc)
+usvfs_configure_target(usvfs_proxy main.cpp)
 target_link_libraries(usvfs_proxy PRIVATE usvfs_dll shared usvfs_helper)
 set_target_properties(usvfs_proxy
     PROPERTIES
@@ -10,3 +11,5 @@ set_target_properties(usvfs_proxy
     RUNTIME_OUTPUT_DIRECTORY_DEBUG ${USVFS_BINDIR}
     RUNTIME_OUTPUT_DIRECTORY_RELEASE ${USVFS_BINDIR}
 )
+
+install(TARGETS usvfs_proxy)

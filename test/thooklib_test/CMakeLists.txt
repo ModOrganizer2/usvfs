@@ -5,13 +5,8 @@ find_package(Boost CONFIG REQUIRED COMPONENTS thread)
 
 # not sure why there is a test_hooks.cpp here?
 add_executable(thooklib_test main.cpp)
+usvfs_configure_target(thooklib_test)
+usvfs_set_test_properties(thooklib_test)
 target_link_libraries(thooklib_test
     PRIVATE test_utils shared thooklib Boost::thread
     GTest::gtest GTest::gtest_main)
-set_target_properties(thooklib_test
-    PROPERTIES
-    FOLDER tests
-    RUNTIME_OUTPUT_NAME thooklib_test${ARCH_POSTFIX}
-    RUNTIME_OUTPUT_DIRECTORY_DEBUG ${USVFS_TEST_BINDIR}
-    RUNTIME_OUTPUT_DIRECTORY_RELEASE ${USVFS_TEST_BINDIR}
-)

@@ -7,12 +7,13 @@ file(GLOB sources "*.cpp" "*.h")
 source_group("" FILES ${sources})
 
 add_library(shared STATIC ${sources})
+usvfs_configure_target(shared)
 target_link_libraries(shared
     PUBLIC
     Boost::algorithm Boost::interprocess comsuppw
     Boost::filesystem spdlog::spdlog_header_only)
 target_include_directories(shared
-    PUBLIC ${PROJECT_SOURCE_DIR}/include ${CMAKE_CURRENT_SOURCE_DIR})
+    PUBLIC ${PROJECT_SOURCE_DIR}/include/usvfs ${CMAKE_CURRENT_SOURCE_DIR})
 target_precompile_headers(shared PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/pch.h)
 target_compile_options(shared PUBLIC /FI"pch.h")
 target_compile_definitions(shared PUBLIC

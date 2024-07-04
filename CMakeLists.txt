@@ -18,6 +18,15 @@ else()
     set(ARCH_POSTFIX _x64)
 endif()
 
+#! usvfs_configure_target
+#
+# common configuration for all targets
+#
+function(usvfs_configure_target TARGET)
+    # TODO: wrap this in if() block
+    target_compile_options(${TARGET} PRIVATE "/MP")
+endfunction()
+
 add_subdirectory(src/shared)
 
 add_subdirectory(src/thooklib)

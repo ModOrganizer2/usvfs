@@ -1,5 +1,5 @@
 #include "Winver.h"
-#include "..\..\include\usvfs_version.h"
+#include "..\..\include\usvfs\usvfs_version.h"
 
 #define VER_FILEVERSION     USVFS_VERSION_MAJOR,USVFS_VERSION_MINOR,USVFS_VERSION_BUILD,USVFS_VERSION_REVISION
 #define VER_FILEVERSION_STR USVFS_VERSION_STRING

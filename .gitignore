@@ -2,6 +2,8 @@
 /bin
 /lib
 /test/bin
+/build*
+/install
 
 # local overides
 /vsbuild/external_dependencies_local.props
