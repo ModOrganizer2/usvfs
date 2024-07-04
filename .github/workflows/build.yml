@@ -2,12 +2,12 @@ name: Build USVFS
 
 on:
   push:
-    branches: master
+    branches: [master, dev/cmake]
   pull_request:
     types: [opened, synchronize, reopened]
 
 env:
-  BOOST_PREBUILT_URL: "https://github.com/ModOrganizer2/mob/releases/download/2.5-dependencies/boost_prebuilt_1_85_0.7z"
+  VCPKG_BINARY_SOURCES: "clear;x-gha,readwrite"
 
 jobs:
   build:
@@ -16,57 +16,44 @@ jobs:
       matrix:
         arch: [x86, x64]
         config: [Debug, Release]
-        tests: ["", "Test"]
     runs-on: windows-2022
     steps:
-      - uses: actions/checkout@v4
+      # https://learn.microsoft.com/en-us/vcpkg/consume/binary-caching-github-actions-cache
+      - name: Export GitHub Actions cache environment variables
+        uses: actions/github-script@v7
         with:
-          submodules: true
-      - name: Fetch Boost prebuilt
-        run: |
-          Invoke-WebRequest -Uri ${env:BOOST_PREBUILT_URL} -OutFile boost.7z
-          Expand-7ZipArchive -Path boost.7z -Destination .\boost
-      - name: Add msbuild to PATH
-        uses: microsoft/setup-msbuild@v2
-        with:
-          msbuild-architecture: ${{ matrix.arch }}
-      - if: matrix.tests == 'Test'
-        name: Fetch googletest
-        uses: actions/checkout@v4
-        with:
-          repository: google/googletest
-          path: ./googletest
-      - if: matrix.tests == 'Test'
-        name: Build googletest
-        run: |
-          cmake -B googletest/build_${{ matrix.arch }} `
-            -A ${{ matrix.arch == 'x86' && 'Win32' || 'x64' }} `
-            -Dgtest_force_shared_crt=ON `
-            googletest
-          cmake --build googletest/build_${{ matrix.arch }} --config ${{ matrix.config }}
-      - name: Build
-        run: |
-          msbuild -nologo `
-            -maxCpuCount "-property:UseMultiToolTask=true" "-property:EnforceProcessCountAcrossBuilds=true" `
-            "-property:Configuration=${{ matrix.config }}${{ matrix.tests }}" `
-            "-property:Platform=${{ matrix.arch }}" `
-            "-property:BOOST_PATH=..\boost" `
-            "-property:GTEST_PATH=..\googletest" `
-            "-property:GTEST_LIBDIR=..\googletest\build_${{ matrix.arch }}\lib\${{ matrix.config }}" `
-            "-property:RunCodeAnalysis=false" `
-            .\vsbuild\usvfs.sln
+          script: |
+            core.exportVariable('ACTIONS_CACHE_URL', process.env.ACTIONS_CACHE_URL || '');
+            core.exportVariable('ACTIONS_RUNTIME_TOKEN', process.env.ACTIONS_RUNTIME_TOKEN || '');
 
-      - if: matrix.tests == 'Test' && matrix.config == 'Debug'
+      # checkout USVFS and vcpkg
+      - uses: actions/checkout@v4
+      - uses: lukka/run-vcpkg@v11
+        with:
+          vcpkgGitCommitId: f61a294e765b257926ae9e9d85f96468a0af74e7
+          vcpkgJsonGlob: ${{ github.workspace }}/usvfs/vcpkg.json
+
+      # configure
+      - run: cmake --preset vs2022-windows-${{ matrix.arch }} -B build_${{ matrix.arch }}
+        env:
+          VCPKG_ROOT: ${{ github.workspace }}/vcpkg
+
+      # build
+      - run: cmake --build build_${{ matrix.arch }} --config ${{ matrix.config }}
+        env:
+          VCPKG_ROOT: ${{ github.workspace }}/vcpkg
+
+      - if: matrix.config == 'Debug'
         uses: actions/upload-artifact@master
         with:
           name: usvfs-libs_${{ matrix.arch }}
           path: ./lib
-      - if: matrix.tests == 'Test' && matrix.config == 'Debug'
+      - if: matrix.config == 'Debug'
         uses: actions/upload-artifact@master
         with:
           name: usvfs-bins_${{ matrix.arch }}
           path: ./bin
-      - if: matrix.tests == 'Test' && matrix.config == 'Debug'
+      - if: matrix.config == 'Debug'
         uses: actions/upload-artifact@master
         with:
           name: usvfs-tests_${{ matrix.arch }}

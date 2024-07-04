@@ -40,13 +40,11 @@
         }
       },
       "hidden": true,
-      "inherits": [
-        "vcpkg"
-      ],
+      "inherits": ["vcpkg"],
       "name": "vcpkg-dev"
     },
     {
-      "binaryDir": "${sourceDir}/cbuild64",
+      "binaryDir": "${sourceDir}/vsbuild64",
       "architecture": {
         "strategy": "set",
         "value": "x64"
@@ -61,7 +59,7 @@
       "name": "windows-x64"
     },
     {
-      "binaryDir": "${sourceDir}/cbuild32",
+      "binaryDir": "${sourceDir}/vsbuild32",
       "architecture": {
         "strategy": "set",
         "value": "Win32"
@@ -80,26 +78,17 @@
         "CMAKE_CXX_FLAGS": "/EHsc /MP /W4"
       },
       "generator": "Visual Studio 17 2022",
-      "inherits": [
-        "cmake-dev",
-        "vcpkg-dev"
-      ],
+      "inherits": ["cmake-dev", "vcpkg-dev"],
       "hidden": true,
       "name": "vs2022-windows",
       "toolset": "v143"
     },
     {
-      "inherits": [
-        "vs2022-windows",
-        "windows-x64"
-      ],
+      "inherits": ["vs2022-windows", "windows-x64"],
       "name": "vs2022-windows-x64"
     },
     {
-      "inherits": [
-        "vs2022-windows",
-        "windows-x86"
-      ],
+      "inherits": ["vs2022-windows", "windows-x86"],
       "name": "vs2022-windows-x86"
     }
   ],
