@@ -1,9 +1,5 @@
 cmake_minimum_required(VERSION 3.16)
 
-if (BUILD_USVFS_TESTS)
-    list(APPEND VCPKG_MANIFEST_FEATURES "testing")
-endif()
-
 project(usvfs)
 
 set_property(GLOBAL PROPERTY USE_FOLDERS ON)
@@ -18,15 +14,6 @@ else()
     set(ARCH_POSTFIX _x64)
 endif()
 
-#! usvfs_configure_target
-#
-# common configuration for all targets
-#
-function(usvfs_configure_target TARGET)
-    # TODO: wrap this in if() block
-    target_compile_options(${TARGET} PRIVATE "/MP")
-endfunction()
-
 add_subdirectory(src/shared)
 
 add_subdirectory(src/thooklib)
@@ -36,7 +23,7 @@ add_subdirectory(src/usvfs_helper)
 add_subdirectory(src/usvfs_dll)
 add_subdirectory(src/usvfs_proxy)
 
-if (BUILD_USVFS_TESTS)
+if (BUILD_TESTING)
     enable_testing()
     set(USVFS_TEST_BINDIR ${CMAKE_CURRENT_LIST_DIR}/test/bin)
     add_subdirectory(test)

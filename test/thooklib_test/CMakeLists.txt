@@ -5,7 +5,6 @@ find_package(Boost CONFIG REQUIRED COMPONENTS thread)
 
 # not sure why there is a test_hooks.cpp here?
 add_executable(thooklib_test main.cpp)
-usvfs_configure_target(thooklib_test)
 usvfs_set_test_properties(thooklib_test)
 target_link_libraries(thooklib_test
     PRIVATE test_utils shared thooklib Boost::thread

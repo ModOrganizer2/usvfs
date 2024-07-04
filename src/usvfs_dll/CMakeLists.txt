@@ -29,7 +29,6 @@ target_sources(usvfs_dll
         ${PROJECT_SOURCE_DIR}/include/usvfs/usvfs.h
         ${PROJECT_SOURCE_DIR}/include/usvfs/usvfsparameters.h
 )
-usvfs_configure_target(usvfs_dll)
 target_link_libraries(usvfs_dll
     PRIVATE shared thooklib usvfs_helper
     Boost::thread spdlog::spdlog_header_only

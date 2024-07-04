@@ -7,7 +7,6 @@ file(GLOB sources "*.cpp" "*.h")
 source_group("" FILES ${sources})
 
 add_library(shared STATIC ${sources})
-usvfs_configure_target(shared)
 target_link_libraries(shared
     PUBLIC
     Boost::algorithm Boost::interprocess comsuppw
