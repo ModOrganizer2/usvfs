@@ -13,6 +13,8 @@
 /vsbuild/ReleaseTest
 /vsbuild/Debug
 /vsbuild/DebugTest
+/vsbuild32
+/vsbuild64
 CMakeUserPresets.json
 
 # test "side effects"
