@@ -58,6 +58,7 @@ write_basic_package_version_file(
   "${CMAKE_CURRENT_BINARY_DIR}/usvfsConfigVersion.cmake"
   VERSION "${usvfs_version_major}.${usvfs_version_minor}.${usvfs_version_build}.${usvfs_version_revision}"
   COMPATIBILITY AnyNewerVersion
+  ARCH_INDEPENDENT
 )
 
 install(FILES
