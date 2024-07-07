@@ -12,3 +12,4 @@ set_target_properties(usvfs_proxy
 )
 
 install(TARGETS usvfs_proxy EXPORT usvfs${ARCH_POSTFIX}Targets)
+install(FILES $<TARGET_PDB_FILE:usvfs_proxy> DESTINATION lib OPTIONAL)

@@ -10,6 +10,18 @@ set(CMAKE_CXX_STANDARD 20)
 set(USVFS_BINDIR ${CMAKE_CURRENT_LIST_DIR}/bin)
 set(USVFS_LIBDIR ${CMAKE_CURRENT_LIST_DIR}/lib)
 
+if (MSVC)
+    # /Zi generate PDBs
+    # /Gy enable function-level linking
+    # /Oi enable intrinsic function
+    add_compile_options("$<$<NOT:$<CONFIG:DEBUG>>:/Zi;/Gy;/Oi>")
+
+    # /OPT:ICF enable COMDAT folding
+    # /DEBUG:FULL generate debug info (PDB)
+    # /OPT:REF enable references (PDB)
+    add_link_options("$<$<NOT:$<CONFIG:DEBUG>>:/OPT:ICF;/DEBUG:FULL;/OPT:REF>")
+endif()
+
 if(CMAKE_SIZEOF_VOID_P EQUAL 4)
     set(ARCH_POSTFIX _x86)
 else()
