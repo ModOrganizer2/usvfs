@@ -34,52 +34,65 @@ jobs:
           vcpkgJsonGlob: ${{ github.workspace }}/usvfs/vcpkg.json
 
       # configure
-      - run: cmake --preset vs2022-windows-${{ matrix.arch }} -B build_${{ matrix.arch }}
+      - run: cmake --preset vs2022-windows-${{ matrix.arch }} -B build_${{ matrix.arch }} "-DCMAKE_INSTALL_PREFIX=install"
         env:
           VCPKG_ROOT: ${{ github.workspace }}/vcpkg
 
       # build
-      - run: cmake --build build_${{ matrix.arch }} --config ${{ matrix.config }}
+      - run: cmake --build build_${{ matrix.arch }} --config ${{ matrix.config }} --target INSTALL
         env:
           VCPKG_ROOT: ${{ github.workspace }}/vcpkg
 
-      - if: matrix.config == 'Debug'
-        uses: actions/upload-artifact@master
+      # package install
+      - uses: actions/upload-artifact@master
         with:
-          name: usvfs-libs_${{ matrix.arch }}
+          name: usvfs_${{ matrix.config }}_${{ matrix.arch }}
+          path: ./install
+
+      # package test/dlls/etc. for tests
+
+      - uses: actions/upload-artifact@master
+        with:
+          name: usvfs-libs_${{ matrix.config }}_${{ matrix.arch }}
           path: ./lib
-      - if: matrix.config == 'Debug'
-        uses: actions/upload-artifact@master
+      - uses: actions/upload-artifact@master
         with:
-          name: usvfs-bins_${{ matrix.arch }}
+          name: usvfs-bins_${{ matrix.config }}_${{ matrix.arch }}
           path: ./bin
-      - if: matrix.config == 'Debug'
-        uses: actions/upload-artifact@master
+      - uses: actions/upload-artifact@master
         with:
-          name: usvfs-tests_${{ matrix.arch }}
+          name: usvfs-tests_${{ matrix.config }}_${{ matrix.arch }}
           path: ./test/bin
 
   # merge x86 / x64 artifacts
   merge-artifacts:
     runs-on: ubuntu-latest
-    name: Merge Artifacts for Tests
+    name: Merge Artifacts
     needs: build
+    strategy:
+      matrix:
+        config: [Debug, Release]
     steps:
+      - name: Merge USVFS install
+        uses: actions/upload-artifact/merge@v4
+        with:
+          name: usvfs_${{ matrix.config }}
+          pattern: usvfs_${{ matrix.config }}_*
       - name: Merge USVFS libs
         uses: actions/upload-artifact/merge@v4
         with:
-          name: usvfs-libs
-          pattern: usvfs-libs_*
+          name: usvfs-libs_${{ matrix.config }}
+          pattern: usvfs-libs_${{ matrix.config }}_*
       - name: Merge USVFS bins
         uses: actions/upload-artifact/merge@v4
         with:
-          name: usvfs-bins
-          pattern: usvfs-bins_*
+          name: usvfs-bins_${{ matrix.config }}
+          pattern: usvfs-bins_${{ matrix.config }}_*
       - name: Merge USVFS tests
         uses: actions/upload-artifact/merge@v4
         with:
-          name: usvfs-tests
-          pattern: usvfs-tests_*
+          name: usvfs-tests_${{ matrix.config }}
+          pattern: usvfs-tests_${{ matrix.config }}_*
 
   test:
     name: Test USVFS
@@ -87,20 +100,21 @@ jobs:
     runs-on: windows-2022
     strategy:
       matrix:
+        config: [Debug, Release]
         arch: [x86, x64]
     steps:
       - uses: actions/checkout@v4
       - uses: actions/download-artifact@master
         with:
-          name: usvfs-libs
+          name: usvfs-libs_${{ matrix.config }}
           path: ./lib
       - uses: actions/download-artifact@master
         with:
-          name: usvfs-bins
+          name: usvfs-bins_${{ matrix.config }}
           path: ./bin
       - uses: actions/download-artifact@master
         with:
-          name: usvfs-tests
+          name: usvfs-tests_${{ matrix.config }}
           path: ./test/bin
       - run: ./test/bin/shared_test_${{ matrix.arch }}.exe
         if: always()
@@ -117,7 +131,7 @@ jobs:
       - uses: actions/upload-artifact@master
         if: always()
         with:
-          name: tests-outputs_${{ matrix.arch }}
+          name: tests-outputs_${{ matrix.config }}_${{ matrix.arch }}
           path: ./test/temp
           if-no-files-found: ignore
           retention-days: 7
