@@ -5,6 +5,7 @@ include(CMakePackageConfigHelpers)
 project(usvfs)
 
 set_property(GLOBAL PROPERTY USE_FOLDERS ON)
+set(CMAKE_VS_INCLUDE_INSTALL_TO_DEFAULT_BUILD 1)
 set(CMAKE_CXX_STANDARD 20)
 
 set(USVFS_BINDIR ${CMAKE_CURRENT_LIST_DIR}/bin)

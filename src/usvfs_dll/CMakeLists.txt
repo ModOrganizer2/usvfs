@@ -49,7 +49,7 @@ set_target_properties(usvfs_dll
     RUNTIME_OUTPUT_DIRECTORY_RELEASE ${USVFS_LIBDIR})
 
 install(TARGETS usvfs_dll EXPORT usvfs${ARCH_POSTFIX}Targets FILE_SET HEADERS)
-install(FILES $<TARGET_PDB_FILE:usvfs_dll> DESTINATION lib OPTIONAL)
+install(FILES $<TARGET_PDB_FILE:usvfs_dll> DESTINATION pdb OPTIONAL)
 install(EXPORT usvfs${ARCH_POSTFIX}Targets
     FILE usvfs${ARCH_POSTFIX}Targets.cmake
     NAMESPACE usvfs${ARCH_POSTFIX}::
