@@ -22,10 +22,6 @@
         "VCPKG_MANIFEST_NO_DEFAULT_FEATURES": {
           "type": "BOOL",
           "value": "ON"
-        },
-        "VCPKG_OVERLAY_PORTS": {
-          "type": "STRING",
-          "value": "${sourceDir}/cmake/ports"
         }
       },
       "toolchainFile": "$env{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake",

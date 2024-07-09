@@ -1,10 +1,7 @@
 {
   "dependencies": [
     "asmjit",
-    {
-      "name": "spdlog",
-      "features": ["wchar"]
-    },
+    "spdlog",
     "libudis86",
     "boost-algorithm",
     "boost-any",
