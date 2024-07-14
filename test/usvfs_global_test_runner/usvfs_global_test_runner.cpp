@@ -2,8 +2,8 @@
 
 #include <test_helpers.h>
 #include <usvfs.h>
+#include <gtest_utils.h>
 
-#include "gtest_utils.h"
 #include "usvfs_global_test_fixture.h"
 
 TEST_F(UsvfsGlobalTest, BasicTest)

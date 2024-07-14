@@ -1,9 +1,12 @@
 #include <gtest/gtest.h>
 
+#define WIN32_LEAN_AND_MEAN
+#include <Windows.h>
+
 #include <filesystem>
 #include <fstream>
 
-#include "../usvfs_global_test_runner/gtest_utils.h"
+#include <gtest_utils.h>
 
 // anonymous class that allow tests to access parameters (currently only where the
 // virtualized data folder is)

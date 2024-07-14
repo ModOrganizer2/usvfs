@@ -58,7 +58,7 @@ foreach(directory ${directories})
     add_subdirectory(${directory})
 
     get_filename_component(dirname ${directory} NAME)
-    if(dirname STREQUAL "test_utils")
+    if((dirname STREQUAL "test_utils") OR (dirname STREQUAL "gtest_utils"))
         continue()
     endif()
 

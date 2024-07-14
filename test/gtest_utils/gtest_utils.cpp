@@ -105,7 +105,7 @@ std::optional<std::string> read_content(const std::filesystem::path& path,
                                                const std::filesystem::path& path,
                                                bool trim)
 {
-  const auto content = read_content(path);
+  const auto content = read_content(path, trim);
 
   if (!content) {
     return ::testing::AssertionFailure()
