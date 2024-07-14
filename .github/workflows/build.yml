@@ -3,6 +3,8 @@ name: Build USVFS
 on:
   push:
     branches: [master, dev/cmake]
+    tags:
+      - "*"
   pull_request:
     types: [opened, synchronize, reopened]
 
@@ -34,7 +36,7 @@ jobs:
           vcpkgJsonGlob: ${{ github.workspace }}/usvfs/vcpkg.json
 
       # configure
-      - run: cmake --preset vs2022-windows-${{ matrix.arch }} -B build_${{ matrix.arch }} "-DCMAKE_INSTALL_PREFIX=install"
+      - run: cmake --preset vs2022-windows-${{ matrix.arch }} -B build_${{ matrix.arch }} "-DCMAKE_INSTALL_PREFIX=install/${{ matrix.config }}"
         env:
           VCPKG_ROOT: ${{ github.workspace }}/vcpkg
 
@@ -47,7 +49,7 @@ jobs:
       - uses: actions/upload-artifact@master
         with:
           name: usvfs_${{ matrix.config }}_${{ matrix.arch }}
-          path: ./install
+          path: ./install/${{ matrix.config }}
 
       # package test/dlls/etc. for tests
 
@@ -64,20 +66,15 @@ jobs:
           name: usvfs-tests_${{ matrix.config }}_${{ matrix.arch }}
           path: ./test/bin
 
-  # merge x86 / x64 artifacts
-  merge-artifacts:
+  # merge x86 / x64 artifacts for tests (root bin/lib and test folder)
+  merge-artifacts-for-tests:
     runs-on: ubuntu-latest
-    name: Merge Artifacts
+    name: Merge Test Artifacts
     needs: build
     strategy:
       matrix:
         config: [Debug, Release]
     steps:
-      - name: Merge USVFS install
-        uses: actions/upload-artifact/merge@v4
-        with:
-          name: usvfs_${{ matrix.config }}
-          pattern: usvfs_${{ matrix.config }}_*
       - name: Merge USVFS libs
         uses: actions/upload-artifact/merge@v4
         with:
@@ -94,9 +91,24 @@ jobs:
           name: usvfs-tests_${{ matrix.config }}
           pattern: usvfs-tests_${{ matrix.config }}_*
 
+  # merge x86 / x64 artifacts (install folder)
+  merge-artifacts-for-release:
+    runs-on: ubuntu-latest
+    name: Merge Install Artifacts
+    needs: build
+    strategy:
+      matrix:
+        config: [Debug, Release]
+    steps:
+      - name: Merge USVFS install
+        uses: actions/upload-artifact/merge@v4
+        with:
+          name: usvfs_${{ matrix.config }}
+          pattern: usvfs_${{ matrix.config }}_*
+
   test:
     name: Test USVFS
-    needs: merge-artifacts
+    needs: merge-artifacts-for-tests
     runs-on: windows-2022
     strategy:
       matrix:
@@ -136,3 +148,34 @@ jobs:
           if-no-files-found: ignore
           retention-days: 7
           overwrite: true
+
+  publish:
+    if: github.ref_type == 'tag'
+    needs: [merge-artifacts-for-release, test]
+    runs-on: windows-2022
+    permissions:
+      contents: write
+    steps:
+      # USVFS does not use different names for debug and release so we are going to
+      # retrieve both install artifacts and put them under install/ and install/debug/
+
+      - name: Download Release Artifact
+        uses: actions/download-artifact@master
+        with:
+          name: usvfs_Release
+          path: ./install
+
+      - name: Download Debug Artifact
+        uses: actions/download-artifact@master
+        with:
+          name: usvfs_Debug
+          path: ./install/debug
+
+      - name: Create USVFS Base archive
+        run: 7z a usvfs_${{ github.ref_name }}.7z ./install/*
+
+      - name: Publish Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: gh release create --draft=false --notes="Release ${{ github.ref_name }}" "${{ github.ref_name }}" ./usvfs_${{ github.ref_name }}.7z
