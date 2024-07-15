@@ -27,9 +27,9 @@ std::optional<std::string> read_content(const std::filesystem::path& path,
     return {};
   }
 
-  const std::size_t count = ifs.tellg();
+  const auto count = ifs.tellg();
 
-  std::string buffer(count, '\0');
+  std::string buffer(static_cast<std::size_t>(count), '\0');
 
   ifs.seekg(0, std::ios::beg);
   ifs.read(buffer.data(), count);

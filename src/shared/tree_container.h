@@ -437,7 +437,6 @@ private:
 
     m_SHM.reset(shm);
     std::pair<TreeMeta*, SharedMemoryT::size_type> res = m_SHM->find<TreeMeta>("Meta");
-    bool lastUser = false;
 
     if (res.first == nullptr) {
       res.first = m_SHM->construct<TreeMeta>("Meta")(createEmpty(), m_SHM->get_segment_manager());

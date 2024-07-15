@@ -251,7 +251,7 @@ BOOL HookRIPIndirection(THookInfo &hookInfo, HookError *error)
     throw std::runtime_error("expected rip-relative addressing");
   }
 
-  uintptr_t chainNext = disasm().jumpTarget();
+  auto chainNext = disasm().jumpTarget();
   if (hookInfo.stub) {
     hookInfo.trampoline = TrampolinePool::instance().storeStub(hookInfo.replacementFunction
                                                                , reinterpret_cast<LPVOID>(hookInfo.originalFunction)
@@ -294,7 +294,7 @@ BOOL HookChainHook(THookInfo &hookInfo, LPBYTE jumpPos, HookError *error)
     throw std::runtime_error("failed to find jump in patch");
   }
 
-  uintptr_t chainTarget = disasm().jumpTarget();
+  auto chainTarget = disasm().jumpTarget();
 
   size_t size = ud_insn_len(disasm());
 

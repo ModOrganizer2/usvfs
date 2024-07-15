@@ -75,15 +75,6 @@ public:
 private:
 };
 
-static shared_ptr<spdlog::logger> logger()
-{
-  shared_ptr<spdlog::logger> result = spdlog::get("test");
-  if (result.get() == nullptr) {
-    result = spdlog::stdout_logger_mt("test");
-  }
-  return result;
-}
-
 TEST(GetProcAddressTest, ReturnsValidResults)
 {
   HMODULE mh = GetModuleHandleA("KernelBase.dll");

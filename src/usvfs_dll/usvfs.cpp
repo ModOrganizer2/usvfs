@@ -50,8 +50,6 @@ PVOID exceptionHandler = nullptr;
 CrashDumpsType usvfs_dump_type = CrashDumpsType::None;
 std::wstring usvfs_dump_path;
 
-typedef std::codecvt_utf8_utf16<wchar_t> u8u16_convert;
-
 // this is called for every single file, so it's a bit long winded, but it's
 // as fast as it gets, probably
 //
