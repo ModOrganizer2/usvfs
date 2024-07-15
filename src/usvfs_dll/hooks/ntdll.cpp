@@ -1124,22 +1124,28 @@ DLLEXPORT NTSTATUS WINAPI usvfs::hook_NtQueryObject(
 
         // update the actual unicode string
         info->Name.Buffer        = unicodeBuffer;
-        info->Name.Length        = buffer.size() * 2;
-        info->Name.MaximumLength = unicodeBufferLength;
+        info->Name.Length        = static_cast<USHORT>(buffer.size() * 2);
+        info->Name.MaximumLength = static_cast<USHORT>(unicodeBufferLength);
 
         res                      = STATUS_SUCCESS;
       }
     }
 
-    LOG_CALL()
-        .PARAMWRAP(res)
-        .PARAM(ObjectInformationLength)
-        .addParam("return_length", ReturnLength ? *ReturnLength : -1)
-        .addParam("tracker_path", trackerInfo)
-        .PARAM(ObjectInformationClass)
-        .PARAM(redir.redirected)
-        .PARAM(redir.path)
-        .addParam("name_info", info->Name);
+    auto logger = LOG_CALL()
+      .PARAMWRAP(res)
+      .PARAM(ObjectInformationLength)
+      .addParam("return_length", ReturnLength ? *ReturnLength : -1)
+      .addParam("tracker_path", trackerInfo)
+      .PARAM(ObjectInformationClass)
+      .PARAM(redir.redirected)
+      .PARAM(redir.path);
+
+    if (res == STATUS_SUCCESS) {
+      logger.addParam("name_info", info->Name);
+    }
+    else {
+      logger.addParam("name_info", "");
+    }
   }
 
   HOOK_END
