@@ -1050,7 +1050,7 @@ DLLEXPORT NTSTATUS WINAPI usvfs::hook_NtQueryObject(
   HANDLE Handle, OBJECT_INFORMATION_CLASS ObjectInformationClass,
   PVOID ObjectInformation, ULONG ObjectInformationLength, PULONG ReturnLength)
 {
-  NTSTATUS res;
+  NTSTATUS res = STATUS_SUCCESS;
 
   HOOK_START_GROUP(MutExHookGroup::FILE_ATTRIBUTES)
   if (!callContext.active()) {
@@ -1091,7 +1091,7 @@ DLLEXPORT NTSTATUS WINAPI usvfs::hook_NtQueryObject(
       std::wstring buffer(static_cast<LPCWSTR>(trackerInfo));
       buffer[6] = L'\0';
 
-      const auto charCount = QueryDosDeviceW(buffer.data() + 4, deviceName, ARRAYSIZE(deviceName)); 
+      QueryDosDeviceW(buffer.data() + 4, deviceName, ARRAYSIZE(deviceName)); 
 
       buffer =
           std::wstring(deviceName) + L'\\' + std::wstring(buffer.data() + 7, buffer.size() - 7);
@@ -1107,17 +1107,18 @@ DLLEXPORT NTSTATUS WINAPI usvfs::hook_NtQueryObject(
         }
 
         if (ReturnLength) {
-          *ReturnLength = requiredLength;
+          *ReturnLength = static_cast<ULONG>(requiredLength);
         }
       } else {
         // put the unicode buffer at the end of the object
-        const auto unicodeBufferLength =
-            ObjectInformationLength - sizeof(OBJECT_NAME_INFORMATION);
+        const USHORT unicodeBufferLength = static_cast<USHORT>(std::min(
+          static_cast<unsigned long long>(std::numeric_limits<USHORT>::max()),
+          static_cast<unsigned long long>(ObjectInformationLength - sizeof(OBJECT_NAME_INFORMATION))));
         LPWSTR unicodeBuffer = reinterpret_cast<LPWSTR>(
           static_cast<LPSTR>(ObjectInformation) + sizeof(OBJECT_NAME_INFORMATION));
 
         // copy the path into the buffer
-        wmemcpy(unicodeBuffer, buffer.data(), buffer.size());
+        wmemcpy_s(unicodeBuffer, unicodeBufferLength, buffer.data(), buffer.size());
 
         // set the null character
         unicodeBuffer[buffer.size()] = L'\0';
@@ -1125,7 +1126,7 @@ DLLEXPORT NTSTATUS WINAPI usvfs::hook_NtQueryObject(
         // update the actual unicode string
         info->Name.Buffer        = unicodeBuffer;
         info->Name.Length        = static_cast<USHORT>(buffer.size() * 2);
-        info->Name.MaximumLength = static_cast<USHORT>(unicodeBufferLength);
+        info->Name.MaximumLength = unicodeBufferLength;
 
         res                      = STATUS_SUCCESS;
       }
@@ -1156,7 +1157,7 @@ DLLEXPORT NTSTATUS WINAPI usvfs::hook_NtQueryInformationFile(
   HANDLE FileHandle, PIO_STATUS_BLOCK IoStatusBlock, PVOID FileInformation,
   ULONG Length, FILE_INFORMATION_CLASS FileInformationClass)
 {
-  NTSTATUS res;
+  NTSTATUS res = STATUS_SUCCESS;
 
   HOOK_START_GROUP(MutExHookGroup::FILE_ATTRIBUTES)
   if (!callContext.active()) {
@@ -1217,7 +1218,7 @@ DLLEXPORT NTSTATUS WINAPI usvfs::hook_NtQueryInformationFile(
 
         // not using SetInfoFilename because the length is not set and we do not need to 
         // 0-out the memory here
-        info->FileNameLength = (trackerInfo.size() - 6) * 2;
+        info->FileNameLength = static_cast<ULONG>((trackerInfo.size() - 6) * 2);
         wmemcpy(info->FileName, filenameFixed, trackerInfo.size() - 6);
         res = STATUS_SUCCESS;
 
