@@ -29,6 +29,7 @@ NtQueryFullAttributesFile_type NtQueryFullAttributesFile;
 NtQueryAttributesFile_type NtQueryAttributesFile;
 NtQueryObject_type NtQueryObject;
 NtQueryInformationFile_type NtQueryInformationFile;
+NtQueryInformationByName_type NtQueryInformationByName;
 NtOpenFile_type NtOpenFile;
 NtCreateFile_type NtCreateFile;
 NtClose_type NtClose;
@@ -50,6 +51,7 @@ void ntdll_declarations_init() {
     LOAD_EXT(ntDLLMod, NtQueryAttributesFile);
     LOAD_EXT(ntDLLMod, NtQueryObject);
     LOAD_EXT(ntDLLMod, NtQueryInformationFile);
+    LOAD_EXT(ntDLLMod, NtQueryInformationByName);
     LOAD_EXT(ntDLLMod, NtCreateFile);
     LOAD_EXT(ntDLLMod, NtOpenFile);
     LOAD_EXT(ntDLLMod, NtClose);

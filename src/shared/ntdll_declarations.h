@@ -399,6 +399,10 @@ using NtQueryInformationFile_type = NTSTATUS(WINAPI*)(
     HANDLE FileHandle, PIO_STATUS_BLOCK IoStatusBlock, PVOID FileInformation,
     ULONG Length, FILE_INFORMATION_CLASS FileInformationClass);
 
+using NtQueryInformationByName_type = NTSTATUS(WINAPI*)(
+  HANDLE FileHandle, PIO_STATUS_BLOCK IoStatusBlock, PVOID FileInformation,
+  ULONG Length, FILE_INFORMATION_CLASS FileInformationClass);
+
 using NtOpenFile_type = NTSTATUS(WINAPI *)(PHANDLE, ACCESS_MASK,
                                           POBJECT_ATTRIBUTES, PIO_STATUS_BLOCK,
                                           ULONG, ULONG);
@@ -426,6 +430,7 @@ extern NtQueryFullAttributesFile_type NtQueryFullAttributesFile;
 extern NtQueryAttributesFile_type NtQueryAttributesFile;
 extern NtQueryObject_type NtQueryObject;
 extern NtQueryInformationFile_type NtQueryInformationFile;
+extern NtQueryInformationByName_type NtQueryInformationByName;
 extern NtOpenFile_type NtOpenFile;
 extern NtCreateFile_type NtCreateFile;
 extern NtClose_type NtClose;

@@ -56,6 +56,15 @@ hook_NtQueryInformationFile(
   ULONG Length, 
   FILE_INFORMATION_CLASS FileInformationClass);
 
+DLLEXPORT NTSTATUS WINAPI
+hook_NtQueryInformationByName(
+  POBJECT_ATTRIBUTES     ObjectAttributes,
+  PIO_STATUS_BLOCK       IoStatusBlock,
+  PVOID                  FileInformation,
+  ULONG                  Length,
+  FILE_INFORMATION_CLASS FileInformationClass
+);
+
 DLLEXPORT NTSTATUS WINAPI hook_NtOpenFile(PHANDLE FileHandle,
                                      ACCESS_MASK DesiredAccess,
                                      POBJECT_ATTRIBUTES ObjectAttributes,

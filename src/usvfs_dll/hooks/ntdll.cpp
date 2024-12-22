@@ -1246,21 +1246,64 @@ DLLEXPORT NTSTATUS WINAPI usvfs::hook_NtQueryInformationFile(
 }
 
 unique_ptr_deleter<OBJECT_ATTRIBUTES>
-makeObjectAttributes(RedirectionInfo &redirInfo,
-                     POBJECT_ATTRIBUTES attributeTemplate)
+makeObjectAttributes(RedirectionInfo& redirInfo,
+  POBJECT_ATTRIBUTES attributeTemplate)
 {
   if (redirInfo.redirected) {
     unique_ptr_deleter<OBJECT_ATTRIBUTES> result(
-        new OBJECT_ATTRIBUTES, [](OBJECT_ATTRIBUTES *ptr) { delete ptr; });
+      new OBJECT_ATTRIBUTES, [](OBJECT_ATTRIBUTES* ptr) { delete ptr; });
     memcpy(result.get(), attributeTemplate, sizeof(OBJECT_ATTRIBUTES));
     result->RootDirectory = nullptr;
-    result->ObjectName    = static_cast<PUNICODE_STRING>(redirInfo.path);
+    result->ObjectName = static_cast<PUNICODE_STRING>(redirInfo.path);
     return result;
-  } else {
+  }
+  else {
     // just reuse the template with a dummy deleter
     return unique_ptr_deleter<OBJECT_ATTRIBUTES>(attributeTemplate,
-                                                 [](OBJECT_ATTRIBUTES *) {});
+      [](OBJECT_ATTRIBUTES*) {});
   }
+}
+
+DLLEXPORT NTSTATUS WINAPI usvfs::hook_NtQueryInformationByName(
+  POBJECT_ATTRIBUTES     ObjectAttributes,
+  PIO_STATUS_BLOCK       IoStatusBlock,
+  PVOID                  FileInformation,
+  ULONG                  Length,
+  FILE_INFORMATION_CLASS FileInformationClass
+)
+{
+  NTSTATUS res = STATUS_SUCCESS;
+
+  HOOK_START_GROUP(MutExHookGroup::FILE_ATTRIBUTES)
+
+  if (!callContext.active()) {
+    res = ::NtQueryInformationByName(ObjectAttributes, IoStatusBlock, FileInformation, Length, FileInformationClass);
+    callContext.updateLastError();
+    return res;
+  }
+
+  RedirectionInfo redir = applyReroute(READ_CONTEXT(), callContext, CreateUnicodeString(ObjectAttributes));
+
+  if (redir.redirected) {
+    auto newObjectAttributes = makeObjectAttributes(redir, ObjectAttributes);
+
+    PRE_REALCALL
+    res = ::NtQueryInformationByName(newObjectAttributes.get(), IoStatusBlock, FileInformation, Length, FileInformationClass);
+    POST_REALCALL
+
+    LOG_CALL()
+      .PARAMWRAP(res)
+      .addParam("input_path", *ObjectAttributes->ObjectName)
+      .addParam("reroute_path", redir.path);
+  }
+  else {
+    PRE_REALCALL
+    res = ::NtQueryInformationByName(ObjectAttributes, IoStatusBlock, FileInformation, Length, FileInformationClass);
+    POST_REALCALL
+  }
+
+  HOOK_END
+  return res;
 }
 
 NTSTATUS ntdll_mess_NtOpenFile(PHANDLE FileHandle,
