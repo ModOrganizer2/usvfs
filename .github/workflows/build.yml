@@ -31,9 +31,6 @@ jobs:
       # checkout USVFS and vcpkg
       - uses: actions/checkout@v4
       - uses: lukka/run-vcpkg@v11
-        with:
-          vcpkgGitCommitId: f61a294e765b257926ae9e9d85f96468a0af74e7
-          vcpkgJsonGlob: ${{ github.workspace }}/usvfs/vcpkg.json
 
       # configure
       - run: cmake --preset vs2022-windows-${{ matrix.arch }} -B build_${{ matrix.arch }} "-DCMAKE_INSTALL_PREFIX=install/${{ matrix.config }}"
