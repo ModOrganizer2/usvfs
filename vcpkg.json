@@ -15,7 +15,6 @@
     "boost-thread",
     "boost-predef"
   ],
-  "builtin-baseline": "f61a294e765b257926ae9e9d85f96468a0af74e7",
   "features": {
     "testing": {
       "description": "Build USVFS tests.",
