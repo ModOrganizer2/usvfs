@@ -43,6 +43,7 @@
 #include <fileapi.h>
 #include <DbgHelp.h>
 
+#define BOOST_INTERPROCESS_SEGMENT_MANAGER_ABI 1
 #include <boost/algorithm/string.hpp>
 #include <boost/algorithm/string/case_conv.hpp>
 #include <boost/any.hpp>
@@ -56,9 +57,9 @@
 #include <boost/filesystem/operations.hpp>
 #include <boost/filesystem/path.hpp>
 #include <boost/format.hpp>
-#include <boost/interprocess/containers/map.hpp>
-#include <boost/interprocess/containers/string.hpp>
-#include <boost/interprocess/containers/vector.hpp>
+#include <boost/container/map.hpp>
+#include <boost/container/string.hpp>
+#include <boost/container/vector.hpp>
 #include <boost/interprocess/ipc/message_queue.hpp>
 #include <boost/interprocess/managed_windows_shared_memory.hpp>
 #include <boost/interprocess/offset_ptr.hpp>

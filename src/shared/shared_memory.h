@@ -22,6 +22,7 @@ along with usvfs. If not, see <http://www.gnu.org/licenses/>.
 #pragma once
 
 namespace bi = boost::interprocess;
+namespace bc = boost::container;
 
 namespace usvfs::shared
 {
@@ -46,6 +47,6 @@ using SegmentManagerT = SharedMemoryT::segment_manager;
 using VoidAllocatorT = boost::container::scoped_allocator_adaptor<boost::interprocess::allocator<void, SegmentManagerT>>;
 using CharAllocatorT = VoidAllocatorT::rebind<char>::other;
 
-using StringT = bi::basic_string<char, std::char_traits<char>, CharAllocatorT> ;
+using StringT = bc::basic_string<char, std::char_traits<char>, CharAllocatorT> ;
 
 }  // namespace
