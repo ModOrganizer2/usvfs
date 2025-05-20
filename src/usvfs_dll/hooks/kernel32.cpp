@@ -1220,6 +1220,60 @@ DWORD WINAPI usvfs::hook_GetFullPathNameW(LPCWSTR lpFileName,
 }
 
 
+DWORD WINAPI usvfs::hook_GetModuleFileNameA(HMODULE hModule, LPSTR lpFilename,
+                                            DWORD nSize) {
+  DWORD res = 0UL;
+
+  HOOK_START_GROUP(MutExHookGroup::ALL_GROUPS)
+
+  PRE_REALCALL
+  res = ::GetModuleFileNameA(hModule, lpFilename, nSize);
+  POST_REALCALL
+  if ((res != 0) && callContext.active()) {
+    std::vector<char> buf;
+    // If GetModuleFileNameA failed because the buffer is not large enough this
+    // complicates matters because we are dealing with incomplete information
+    // (consider for example the case that we have a long real path which will
+    // be routed to a short virtual so the call should actually succeed in such
+    // a case). To solve this we simply use our own buffer to find the complete
+    // module path:
+    DWORD full_res = res;
+    size_t buf_size = nSize;
+    while (full_res == buf_size) {
+      buf_size = std::max(static_cast<size_t>(MAX_PATH), buf_size * 2);
+      buf.resize(buf_size);
+      full_res = ::GetModuleFileNameA(hModule, buf.data(), buf_size);
+    }
+
+    RerouteW reroute
+      = RerouteW::create(READ_CONTEXT(), callContext, ush::string_cast<std::wstring>(buf.empty() ? lpFilename : buf.data()).c_str(), true);
+    if (reroute.wasRerouted()) {
+      DWORD reroutedSize = static_cast<DWORD>(wcslen(reroute.fileName()));
+      if (reroutedSize >= nSize) {
+        reroutedSize = nSize - 1;
+        callContext.updateLastError(ERROR_INSUFFICIENT_BUFFER);
+        res = nSize;
+      } else
+        res = reroutedSize;
+      memcpy(lpFilename,
+             ush::string_cast<std::string>(reroute.fileName()).c_str(),
+             reroutedSize * sizeof(lpFilename[0]));
+      lpFilename[reroutedSize] = 0;
+
+      LOG_CALL()
+          .PARAM(hModule)
+          .addParam("lpFilename", (res != 0UL) ? lpFilename : "<not set>")
+          .PARAM(nSize)
+          .PARAM(res)
+          .PARAM(callContext.lastError());
+    }
+  }
+  HOOK_END
+
+  return res;
+}
+
+
 DWORD WINAPI usvfs::hook_GetModuleFileNameW(HMODULE hModule,
                                               LPWSTR lpFilename, DWORD nSize)
 {
