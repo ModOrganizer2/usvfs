@@ -117,7 +117,12 @@ static inline bool pathsOnDifferentDrives(LPCWSTR path1, LPCWSTR path2)
   return drive1 && drive2 && towupper(drive1) != towupper(drive2);
 }
 
-
+HMODULE WINAPI usvfs::hook_LoadLibraryExA(LPCSTR lpFileName, HANDLE hFile,
+    DWORD dwFlags)
+{
+    return hook_LoadLibraryExW(
+        ush::string_cast<std::wstring>(lpFileName).c_str(), hFile, dwFlags);
+}
 
 HMODULE WINAPI usvfs::hook_LoadLibraryExW(LPCWSTR lpFileName, HANDLE hFile,
                                             DWORD dwFlags)
@@ -336,6 +341,31 @@ BOOL WINAPI usvfs::hook_CreateProcessInternalW(
   return res;
 }
 
+BOOL WINAPI usvfs::hook_GetFileAttributesExA(
+    LPCSTR lpFileName, GET_FILEEX_INFO_LEVELS fInfoLevelId,
+    LPVOID lpFileInformation)
+{
+    BOOL res = FALSE;
+
+    HOOK_START_GROUP(MutExHookGroup::FILE_ATTRIBUTES)
+    if (!callContext.active() || !RerouteW::interestingPath(lpFileName)) {
+        res = GetFileAttributesExA(lpFileName, fInfoLevelId, lpFileInformation);
+        callContext.updateLastError();
+        return res;
+    }
+    HOOK_END
+
+    HOOK_START
+    const std::wstring fileName = ush::string_cast<std::wstring>(lpFileName);
+
+    PRE_REALCALL
+    res = GetFileAttributesExW(fileName.c_str(), fInfoLevelId, lpFileInformation);
+    POST_REALCALL
+
+    HOOK_END
+    return res;
+}
+
 BOOL WINAPI usvfs::hook_GetFileAttributesExW(
     LPCWSTR lpFileName, GET_FILEEX_INFO_LEVELS fInfoLevelId,
     LPVOID lpFileInformation)
@@ -405,6 +435,29 @@ BOOL WINAPI usvfs::hook_GetFileAttributesExW(
   HOOK_END
 
   return res;
+}
+
+DWORD WINAPI usvfs::hook_GetFileAttributesA(LPCSTR lpFileName)
+{
+    BOOL res = FALSE;
+
+    HOOK_START_GROUP(MutExHookGroup::FILE_ATTRIBUTES)
+    if (!callContext.active() || !RerouteW::interestingPath(lpFileName)) {
+        res = GetFileAttributesA(lpFileName);
+        callContext.updateLastError();
+        return res;
+    }
+    HOOK_END
+
+    HOOK_START
+    const std::wstring fileName = ush::string_cast<std::wstring>(lpFileName);
+
+    PRE_REALCALL
+    res = GetFileAttributesW(fileName.c_str());
+    POST_REALCALL
+
+    HOOK_END
+    return res;
 }
 
 DWORD WINAPI usvfs::hook_GetFileAttributesW(LPCWSTR lpFileName)
@@ -1219,6 +1272,32 @@ DWORD WINAPI usvfs::hook_GetFullPathNameW(LPCWSTR lpFileName,
   return res;
 }
 
+DWORD WINAPI usvfs::hook_GetModuleFileNameA(HMODULE hModule,
+    LPSTR lpFilename, DWORD nSize)
+{
+    DWORD res = 0;
+
+    HOOK_START
+
+    std::wstring buffer;
+    buffer.resize(nSize);
+
+    PRE_REALCALL
+    res = GetModuleFileNameW(hModule, &buffer[0], nSize);
+    POST_REALCALL
+
+    if (res > 0) {
+        res = WideCharToMultiByte(CP_ACP, 0, buffer.c_str(), res + 1,
+            lpFilename, nSize, nullptr, nullptr);
+        if (res > nSize) {
+            lpFilename[nSize - 1] = '\0';
+        }
+    }
+
+    HOOK_END
+
+    return res;
+}
 
 DWORD WINAPI usvfs::hook_GetModuleFileNameW(HMODULE hModule,
                                               LPWSTR lpFilename, DWORD nSize)

@@ -222,6 +222,8 @@ void HookManager::initHooks()
   HMODULE kbaseMod = GetModuleHandleA("kernelbase.dll");
   spdlog::get("usvfs")->debug("kernelbase.dll at {0:x}", reinterpret_cast<uintptr_t>(kbaseMod));
 
+  installHook(kbaseMod, k32Mod, "GetFileAttributesExA", hook_GetFileAttributesExA);
+  installHook(kbaseMod, k32Mod, "GetFileAttributesA", hook_GetFileAttributesA);
   installHook(kbaseMod, k32Mod, "GetFileAttributesExW", hook_GetFileAttributesExW);
   installHook(kbaseMod, k32Mod, "GetFileAttributesW", hook_GetFileAttributesW);
   installHook(kbaseMod, k32Mod, "SetFileAttributesW", hook_SetFileAttributesW);
@@ -272,9 +274,11 @@ void HookManager::initHooks()
   installHook(ntdllMod, nullptr, "NtClose", hook_NtClose);
   installHook(ntdllMod, nullptr, "NtTerminateProcess", hook_NtTerminateProcess);
 
+  installHook(kbaseMod, k32Mod, "LoadLibraryExA", hook_LoadLibraryExA);
   installHook(kbaseMod, k32Mod, "LoadLibraryExW", hook_LoadLibraryExW);
 
   // install this hook late as usvfs is calling it itself for debugging purposes
+  installHook(kbaseMod, k32Mod, "GetModuleFileNameA", hook_GetModuleFileNameA);
   installHook(kbaseMod, k32Mod, "GetModuleFileNameW", hook_GetModuleFileNameW);
 
   spdlog::get("usvfs")->debug("hooks installed");

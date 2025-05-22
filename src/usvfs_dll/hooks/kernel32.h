@@ -5,7 +5,9 @@
 
 namespace usvfs {
 
+DLLEXPORT BOOL WINAPI hook_GetFileAttributesExA(LPCSTR lpFileName, GET_FILEEX_INFO_LEVELS fInfoLevelId, LPVOID lpFileInformation);
 DLLEXPORT BOOL WINAPI hook_GetFileAttributesExW(LPCWSTR lpFileName, GET_FILEEX_INFO_LEVELS fInfoLevelId, LPVOID lpFileInformation);
+DLLEXPORT DWORD WINAPI hook_GetFileAttributesA(LPCSTR lpFileName);
 DLLEXPORT DWORD WINAPI hook_GetFileAttributesW(LPCWSTR lpFileName);
 DLLEXPORT DWORD WINAPI hook_SetFileAttributesW(LPCWSTR lpFileName, DWORD dwFileAttributes);
 
@@ -34,11 +36,13 @@ DLLEXPORT BOOL WINAPI hook_CopyFileExW(LPCWSTR lpExistingFileName, LPCWSTR lpNew
 extern HRESULT (WINAPI *CopyFile2)(PCWSTR pwszExistingFileName, PCWSTR pwszNewFileName, COPYFILE2_EXTENDED_PARAMETERS *pExtendedParameters);
 DLLEXPORT HRESULT WINAPI hook_CopyFile2(PCWSTR pwszExistingFileName, PCWSTR pwszNewFileName, COPYFILE2_EXTENDED_PARAMETERS *pExtendedParameters);
 
+DLLEXPORT HMODULE WINAPI hook_LoadLibraryExA(LPCSTR lpFileName, HANDLE hFile, DWORD dwFlags);
 DLLEXPORT HMODULE WINAPI hook_LoadLibraryExW(LPCWSTR lpFileName, HANDLE hFile, DWORD dwFlags);
 
 extern BOOL (WINAPI *CreateProcessInternalW)(LPVOID token, LPCWSTR lpApplicationName, LPWSTR lpCommandLine, LPSECURITY_ATTRIBUTES lpProcessAttributes, LPSECURITY_ATTRIBUTES lpThreadAttributes, BOOL bInheritHandles, DWORD dwCreationFlags, LPVOID lpEnvironment, LPCWSTR lpCurrentDirectory, LPSTARTUPINFOW lpStartupInfo, LPPROCESS_INFORMATION lpProcessInformation, LPVOID newToken);
 DLLEXPORT BOOL WINAPI hook_CreateProcessInternalW(LPVOID token, LPCWSTR lpApplicationName, LPWSTR lpCommandLine, LPSECURITY_ATTRIBUTES lpProcessAttributes, LPSECURITY_ATTRIBUTES lpThreadAttributes, BOOL bInheritHandles, DWORD dwCreationFlags, LPVOID lpEnvironment, LPCWSTR lpCurrentDirectory, LPSTARTUPINFOW lpStartupInfo, LPPROCESS_INFORMATION lpProcessInformation, LPVOID newToken);
 
+DLLEXPORT DWORD WINAPI hook_GetModuleFileNameA(HMODULE hModule, LPSTR lpFilename, DWORD nSize);
 DLLEXPORT DWORD WINAPI hook_GetModuleFileNameW(HMODULE hModule, LPWSTR lpFilename, DWORD nSize);
 
 DLLEXPORT HANDLE WINAPI hook_FindFirstFileExW(LPCWSTR lpFileName, FINDEX_INFO_LEVELS fInfoLevelId, LPVOID lpFindFileData, FINDEX_SEARCH_OPS  fSearchOp, LPVOID lpSearchFilter, DWORD dwAdditionalFlags);
