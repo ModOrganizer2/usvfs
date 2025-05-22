@@ -120,8 +120,17 @@ static inline bool pathsOnDifferentDrives(LPCWSTR path1, LPCWSTR path2)
 HMODULE WINAPI usvfs::hook_LoadLibraryExA(LPCSTR lpFileName, HANDLE hFile,
     DWORD dwFlags)
 {
-    return hook_LoadLibraryExW(
-        ush::string_cast<std::wstring>(lpFileName).c_str(), hFile, dwFlags);
+    HMODULE res = nullptr;
+
+    HOOK_START_GROUP(MutExHookGroup::LOAD_LIBRARY)
+    const std::wstring fileName = ush::string_cast<std::wstring>(lpFileName);
+
+    PRE_REALCALL
+    res = LoadLibraryExW(fileName.c_str(), hFile, dwFlags);
+    POST_REALCALL
+
+    HOOK_END
+    return res;
 }
 
 HMODULE WINAPI usvfs::hook_LoadLibraryExW(LPCWSTR lpFileName, HANDLE hFile,
