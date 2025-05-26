@@ -12,6 +12,12 @@ TEST_F(UsvfsGlobalTest, BasicTest)
   ASSERT_DIRECTORY_EQ(ExpectedFolder(), ActualFolder());
 }
 
+TEST_F(UsvfsGlobalTest, BoostFilesystemTest)
+{
+  ASSERT_EQ(0, Run());
+  ASSERT_DIRECTORY_EQ(ExpectedFolder(), ActualFolder());
+}
+
 TEST_F(UsvfsGlobalTest, RedFileSystemTest)
 {
   SetUpOverwrite(true);
