@@ -98,7 +98,7 @@ struct shared::SHMDataCreator<RedirectionData, RedirectionData>
   }
 };
 
-typedef shared::DirectoryTree<RedirectionData> RedirectionTree;
-typedef shared::TreeContainer<RedirectionTree> RedirectionTreeContainer;
+using RedirectionTree          = shared::DirectoryTree<RedirectionData>;
+using RedirectionTreeContainer = shared::TreeContainer<RedirectionTree>;
 
 }  // namespace usvfs

@@ -1,16 +1,25 @@
 #include "ntdll.h"
-#include "../hookcallcontext.h"
-#include "../hookcontext.h"
-#include "../maptracker.h"
-#include "../stringcast_boost.h"
-#include "sharedids.h"
+
+#include <mutex>
+#include <queue>
+#include <set>
+
+#include <boost/filesystem.hpp>
+
 #include <addrtools.h>
 #include <loghelpers.h>
-#include <queue>
 #include <stringcast.h>
 #include <stringutils.h>
 #include <unicodestring.h>
 #include <usvfs.h>
+
+#include "../hookcallcontext.h"
+#include "../hookcontext.h"
+#include "../maptracker.h"
+#include "../stringcast_boost.h"
+
+#include "file_information_utils.h"
+#include "sharedids.h"
 
 namespace ulog = usvfs::log;
 namespace ush  = usvfs::shared;
@@ -245,201 +254,6 @@ RedirectionInfo applyReroute(const usvfs::HookContext::ConstPtr& context,
   return applyReroute(context, callContext, CreateUnicodeString(inAttributes));
 }
 
-ULONG StructMinSize(FILE_INFORMATION_CLASS infoClass)
-{
-  switch (infoClass) {
-  case FileBothDirectoryInformation:
-    return sizeof(FILE_BOTH_DIR_INFORMATION);
-  case FileDirectoryInformation:
-    return sizeof(FILE_DIRECTORY_INFORMATION);
-  case FileFullDirectoryInformation:
-    return sizeof(FILE_FULL_DIR_INFORMATION);
-  case FileIdBothDirectoryInformation:
-    return sizeof(FILE_ID_BOTH_DIR_INFORMATION);
-  case FileIdFullDirectoryInformation:
-    return sizeof(FILE_ID_FULL_DIR_INFORMATION);
-  case FileNamesInformation:
-    return sizeof(FILE_NAMES_INFORMATION);
-  case FileObjectIdInformation:
-    return sizeof(FILE_OBJECTID_INFORMATION);
-  case FileReparsePointInformation:
-    return sizeof(FILE_REPARSE_POINT_INFORMATION);
-  case FileIdExtdDirectoryInformation:
-    return sizeof(FILE_ID_EXTD_DIR_INFORMATION);
-  default:
-    return 0;
-  }
-}
-
-void GetInfoData(LPCVOID address, FILE_INFORMATION_CLASS infoClass, ULONG& offset,
-                 std::wstring& fileName)
-{
-  switch (infoClass) {
-  case FileBothDirectoryInformation: {
-    const FILE_BOTH_DIR_INFORMATION* info =
-        reinterpret_cast<const FILE_BOTH_DIR_INFORMATION*>(address);
-    offset   = info->NextEntryOffset;
-    fileName = std::wstring(info->FileName, info->FileNameLength / sizeof(WCHAR));
-  } break;
-  case FileDirectoryInformation: {
-    const FILE_DIRECTORY_INFORMATION* info =
-        reinterpret_cast<const FILE_DIRECTORY_INFORMATION*>(address);
-    offset   = info->NextEntryOffset;
-    fileName = std::wstring(info->FileName, info->FileNameLength / sizeof(WCHAR));
-  } break;
-  case FileNamesInformation: {
-    const FILE_NAMES_INFORMATION* info =
-        reinterpret_cast<const FILE_NAMES_INFORMATION*>(address);
-    offset   = info->NextEntryOffset;
-    fileName = std::wstring(info->FileName, info->FileNameLength / sizeof(WCHAR));
-  } break;
-  case FileIdFullDirectoryInformation: {
-    const FILE_ID_FULL_DIR_INFORMATION* info =
-        reinterpret_cast<const FILE_ID_FULL_DIR_INFORMATION*>(address);
-    offset   = info->NextEntryOffset;
-    fileName = std::wstring(info->FileName, info->FileNameLength / sizeof(WCHAR));
-  } break;
-  case FileFullDirectoryInformation: {
-    const FILE_FULL_DIR_INFORMATION* info =
-        reinterpret_cast<const FILE_FULL_DIR_INFORMATION*>(address);
-    offset   = info->NextEntryOffset;
-    fileName = std::wstring(info->FileName, info->FileNameLength / sizeof(WCHAR));
-  } break;
-  case FileIdBothDirectoryInformation: {
-    const FILE_ID_BOTH_DIR_INFORMATION* info =
-        reinterpret_cast<const FILE_ID_BOTH_DIR_INFORMATION*>(address);
-    offset   = info->NextEntryOffset;
-    fileName = std::wstring(info->FileName, info->FileNameLength / sizeof(WCHAR));
-  } break;
-  case FileObjectIdInformation: {
-    offset = sizeof(FILE_OBJECTID_INFORMATION);
-  } break;
-  case FileReparsePointInformation: {
-    offset = sizeof(FILE_REPARSE_POINT_INFORMATION);
-  } break;
-  case FileIdExtdDirectoryInformation: {
-    const auto* info = reinterpret_cast<const FILE_ID_EXTD_DIR_INFORMATION*>(address);
-
-    offset   = info->NextEntryOffset;
-    fileName = std::wstring(info->FileName, info->FileNameLength / sizeof(WCHAR));
-  } break;
-  default: {
-    offset = ULONG_MAX;
-  } break;
-  }
-}
-
-template <typename T>
-void SetInfoFilenameImpl(T* info, const std::wstring& fileName)
-{
-  info->FileNameLength = static_cast<ULONG>(fileName.length() * sizeof(WCHAR));
-  memcpy(info->FileName, fileName.c_str(), info->FileNameLength + 1);
-}
-
-// like wcsrchr except that the position to start searching can be specified and
-// the string doesn't
-// need to be 0-terminated
-const wchar_t* wcsrevsearch(const wchar_t* cur, const wchar_t* start, wchar_t ch)
-{
-  for (; cur > start; --cur) {
-    if (*cur == ch) {
-      return cur;
-    }
-  }
-  return nullptr;
-}
-
-template <typename T>
-void SetInfoFilenameImplSN(T* info, const std::wstring& fileName)
-{
-  memset(info->FileName, L'\0', info->FileNameLength);
-  info->FileNameLength = static_cast<ULONG>(fileName.length() * sizeof(WCHAR));
-  memcpy(info->FileName, fileName.c_str(),
-         info->FileNameLength);  // doesn't need to be 0-terminated
-
-  if (info->ShortNameLength > 0) {
-    info->ShortNameLength =
-        static_cast<CCHAR>(GetShortPathNameW(fileName.c_str(), info->ShortName, 8));
-  }
-}
-
-void SetInfoFilename(LPVOID address, FILE_INFORMATION_CLASS infoClass,
-                     const std::wstring& fileName)
-{
-  switch (infoClass) {
-  case FileAllInformation: {
-    SetInfoFilenameImpl(
-        &reinterpret_cast<FILE_ALL_INFORMATION*>(address)->NameInformation, fileName);
-  } break;
-  case FileBothDirectoryInformation: {
-    SetInfoFilenameImplSN(reinterpret_cast<FILE_BOTH_DIR_INFORMATION*>(address),
-                          fileName);
-  } break;
-  case FileDirectoryInformation: {
-    SetInfoFilenameImpl(reinterpret_cast<FILE_DIRECTORY_INFORMATION*>(address),
-                        fileName);
-  } break;
-  case FileNameInformation: {
-    SetInfoFilenameImpl(reinterpret_cast<FILE_NAME_INFORMATION*>(address), fileName);
-  } break;
-  case FileNamesInformation: {
-    SetInfoFilenameImpl(reinterpret_cast<FILE_NAMES_INFORMATION*>(address), fileName);
-  } break;
-  case FileNormalizedNameInformation: {
-    SetInfoFilenameImpl(reinterpret_cast<FILE_NAME_INFORMATION*>(address), fileName);
-  } break;
-  case FileIdFullDirectoryInformation: {
-    SetInfoFilenameImpl(reinterpret_cast<FILE_ID_FULL_DIR_INFORMATION*>(address),
-                        fileName);
-  } break;
-  case FileFullDirectoryInformation: {
-    SetInfoFilenameImpl(reinterpret_cast<FILE_FULL_DIR_INFORMATION*>(address),
-                        fileName);
-  } break;
-  case FileIdBothDirectoryInformation: {
-    SetInfoFilenameImplSN(reinterpret_cast<FILE_ID_BOTH_DIR_INFORMATION*>(address),
-                          fileName);
-  } break;
-  case FileIdExtdDirectoryInformation: {
-    SetInfoFilenameImpl(reinterpret_cast<FILE_ID_EXTD_DIR_INFORMATION*>(address),
-                        fileName);
-  } break;
-  default: {
-    // NOP
-  } break;
-  }
-}
-
-void SetInfoOffset(LPVOID address, FILE_INFORMATION_CLASS infoClass, ULONG offset)
-{
-  switch (infoClass) {
-  case FileBothDirectoryInformation: {
-    reinterpret_cast<FILE_BOTH_DIR_INFORMATION*>(address)->NextEntryOffset = offset;
-  } break;
-  case FileDirectoryInformation: {
-    reinterpret_cast<FILE_DIRECTORY_INFORMATION*>(address)->NextEntryOffset = offset;
-  } break;
-  case FileNamesInformation: {
-    reinterpret_cast<FILE_NAMES_INFORMATION*>(address)->NextEntryOffset = offset;
-  } break;
-  case FileIdFullDirectoryInformation: {
-    reinterpret_cast<FILE_ID_FULL_DIR_INFORMATION*>(address)->NextEntryOffset = offset;
-  } break;
-  case FileFullDirectoryInformation: {
-    reinterpret_cast<FILE_FULL_DIR_INFORMATION*>(address)->NextEntryOffset = offset;
-  } break;
-  case FileIdBothDirectoryInformation: {
-    reinterpret_cast<FILE_ID_BOTH_DIR_INFORMATION*>(address)->NextEntryOffset = offset;
-  } break;
-  case FileIdExtdDirectoryInformation: {
-    reinterpret_cast<FILE_ID_EXTD_DIR_INFORMATION*>(address)->NextEntryOffset = offset;
-  } break;
-  default: {
-    // NOP
-  } break;
-  }
-}
-
 int NextDividableBy(int number, int divider)
 {
   return static_cast<int>(
@@ -503,7 +317,7 @@ NTSTATUS addNtSearchData(HANDLE hdl, PUNICODE_STRING FileName,
       while (totalOffset < status.Information) {
         ULONG offset;
         std::wstring fileName;
-        GetInfoData(buffer, FileInformationClass, offset, fileName);
+        GetFileInformationData(FileInformationClass, buffer, offset, fileName);
         // in case this is a single-file search result and the specified
         // filename differs from the file name found, replace it in the
         // information structure
@@ -518,7 +332,7 @@ NTSTATUS addNtSearchData(HANDLE hdl, PUNICODE_STRING FileName,
           }
           // WARNING for the case where the fake name is longer this needs to
           // move back all further results and update the offset first
-          SetInfoFilename(buffer, FileInformationClass, fakeName);
+          SetFileInformationFileName(FileInformationClass, buffer, fakeName);
           fileName = fakeName;
         }
         bool add = true;
@@ -559,7 +373,7 @@ NTSTATUS addNtSearchData(HANDLE hdl, PUNICODE_STRING FileName,
       }
     }
     if (lastValidRecord != nullptr) {
-      SetInfoOffset(lastValidRecord, FileInformationClass, 0);
+      SetFileInformationOffset(FileInformationClass, lastValidRecord, 0);
     }
   }
   return res;
