@@ -376,7 +376,18 @@ void __cdecl InitHooks(LPVOID parameters, size_t)
   InitLoggingInternal(false, true);
 
   const usvfsParameters* params = reinterpret_cast<usvfsParameters*>(parameters);
-  usvfs_dump_type               = params->crashDumpsType;
+
+  // there is already a wait in the constructor of HookManager, but this one is useful
+  // to debug code here (from experience... ), should not wait twice since the second
+  // will return true immediately
+  if (params->debugMode) {
+    while (!::IsDebuggerPresent()) {
+      // wait for debugger to attach
+      ::Sleep(100);
+    }
+  }
+
+  usvfs_dump_type = params->crashDumpsType;
   usvfs_dump_path =
       ush::string_cast<std::wstring>(params->crashDumpsPath, ush::CodePage::UTF8);
 

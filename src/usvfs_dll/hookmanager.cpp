@@ -63,7 +63,10 @@ HookManager::HookManager(const usvfsParameters& params, HMODULE module)
   initHooks();
 
   if (params.debugMode) {
-    MessageBoxA(nullptr, "Hooks initialized", "Pause", MB_OK);
+    while (!::IsDebuggerPresent()) {
+      // wait for debugger to attach
+      ::Sleep(100);
+    }
   }
 }
 

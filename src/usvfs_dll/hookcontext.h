@@ -92,11 +92,6 @@ public:
   usvfsParameters callParameters() const;
 
   /**
-   * @return true if usvfs is running in debug mode
-   */
-  bool debugMode() const { return m_DebugMode; }
-
-  /**
    * @return path to the calling library itself
    */
   std::wstring dllPath() const;
@@ -169,8 +164,6 @@ private:
   std::vector<std::future<int>> m_Futures;
 
   mutable std::map<DataIDT, boost::any> m_CustomData;
-
-  bool m_DebugMode{false};
 
   HMODULE m_DLLModule;
 

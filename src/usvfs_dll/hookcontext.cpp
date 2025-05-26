@@ -65,7 +65,7 @@ HookContext::HookContext(const usvfsParameters& params, HMODULE module)
           m_Parameters->currentInverseSHMName(),
           128 * 1024)  // 128 KiB should cover reverse tree for even larger setups
       ,
-      m_DebugMode(params.debugMode), m_DLLModule(module)
+      m_DLLModule(module)
 {
   if (s_Instance != nullptr) {
     throw std::runtime_error("singleton duplicate instantiation (HookContext)");
