@@ -185,6 +185,122 @@ typedef struct _FILE_NAME_INFORMATION
   WCHAR FileName[1];
 } FILE_NAME_INFORMATION, *PFILE_NAME_INFORMATION;
 
+typedef struct _FILE_ID_EXTD_DIR_INFORMATION
+{
+  ULONG NextEntryOffset;
+  ULONG FileIndex;
+  LARGE_INTEGER CreationTime;
+  LARGE_INTEGER LastAccessTime;
+  LARGE_INTEGER LastWriteTime;
+  LARGE_INTEGER ChangeTime;
+  LARGE_INTEGER EndOfFile;
+  LARGE_INTEGER AllocationSize;
+  ULONG FileAttributes;
+  ULONG FileNameLength;
+  ULONG EaSize;
+  ULONG ReparsePointTag;
+  FILE_ID_128 FileId;
+  WCHAR FileName[1];
+} FILE_ID_EXTD_DIR_INFORMATION, *PFILE_ID_EXTD_DIR_INFORMATION;
+
+typedef struct _FILE_ID_EXTD_BOTH_DIR_INFORMATION
+{
+  ULONG NextEntryOffset;
+  ULONG FileIndex;
+  LARGE_INTEGER CreationTime;
+  LARGE_INTEGER LastAccessTime;
+  LARGE_INTEGER LastWriteTime;
+  LARGE_INTEGER ChangeTime;
+  LARGE_INTEGER EndOfFile;
+  LARGE_INTEGER AllocationSize;
+  ULONG FileAttributes;
+  ULONG FileNameLength;
+  ULONG EaSize;
+  ULONG ReparsePointTag;
+  FILE_ID_128 FileId;
+  CCHAR ShortNameLength;
+  WCHAR ShortName[12];
+  WCHAR FileName[1];
+} FILE_ID_EXTD_BOTH_DIR_INFORMATION, *PFILE_ID_EXTD_BOTH_DIR_INFORMATION;
+
+typedef struct _FILE_ID_64_EXTD_DIR_INFORMATION
+{
+  ULONG NextEntryOffset;
+  ULONG FileIndex;
+  LARGE_INTEGER CreationTime;
+  LARGE_INTEGER LastAccessTime;
+  LARGE_INTEGER LastWriteTime;
+  LARGE_INTEGER ChangeTime;
+  LARGE_INTEGER EndOfFile;
+  LARGE_INTEGER AllocationSize;
+  ULONG FileAttributes;
+  ULONG FileNameLength;
+  ULONG EaSize;
+  ULONG ReparsePointTag;
+  LARGE_INTEGER FileId;
+  WCHAR FileName[1];
+} FILE_ID_64_EXTD_DIR_INFORMATION, *PFILE_ID_64_EXTD_DIR_INFORMATION;
+
+typedef struct _FILE_ID_64_EXTD_BOTH_DIR_INFORMATION
+{
+  ULONG NextEntryOffset;
+  ULONG FileIndex;
+  LARGE_INTEGER CreationTime;
+  LARGE_INTEGER LastAccessTime;
+  LARGE_INTEGER LastWriteTime;
+  LARGE_INTEGER ChangeTime;
+  LARGE_INTEGER EndOfFile;
+  LARGE_INTEGER AllocationSize;
+  ULONG FileAttributes;
+  ULONG FileNameLength;
+  ULONG EaSize;
+  ULONG ReparsePointTag;
+  LARGE_INTEGER FileId;
+  CCHAR ShortNameLength;
+  WCHAR ShortName[12];
+  WCHAR FileName[1];
+} FILE_ID_64_EXTD_BOTH_DIR_INFORMATION, *PFILE_ID_64_EXTD_BOTH_DIR_INFORMATION;
+
+typedef struct _FILE_ID_ALL_EXTD_DIR_INFORMATION
+{
+  ULONG NextEntryOffset;
+  ULONG FileIndex;
+  LARGE_INTEGER CreationTime;
+  LARGE_INTEGER LastAccessTime;
+  LARGE_INTEGER LastWriteTime;
+  LARGE_INTEGER ChangeTime;
+  LARGE_INTEGER EndOfFile;
+  LARGE_INTEGER AllocationSize;
+  ULONG FileAttributes;
+  ULONG FileNameLength;
+  ULONG EaSize;
+  ULONG ReparsePointTag;
+  LARGE_INTEGER FileId;
+  FILE_ID_128 FileId128;
+  WCHAR FileName[1];
+} FILE_ID_ALL_EXTD_DIR_INFORMATION, *PFILE_ID_ALL_EXTD_DIR_INFORMATION;
+
+typedef struct _FILE_ID_ALL_EXTD_BOTH_DIR_INFORMATION
+{
+  ULONG NextEntryOffset;
+  ULONG FileIndex;
+  LARGE_INTEGER CreationTime;
+  LARGE_INTEGER LastAccessTime;
+  LARGE_INTEGER LastWriteTime;
+  LARGE_INTEGER ChangeTime;
+  LARGE_INTEGER EndOfFile;
+  LARGE_INTEGER AllocationSize;
+  ULONG FileAttributes;
+  ULONG FileNameLength;
+  ULONG EaSize;
+  ULONG ReparsePointTag;
+  LARGE_INTEGER FileId;
+  FILE_ID_128 FileId128;
+  CCHAR ShortNameLength;
+  WCHAR ShortName[12];
+  WCHAR FileName[1];
+} FILE_ID_ALL_EXTD_BOTH_DIR_INFORMATION, *PFILE_ID_ALL_EXTD_BOTH_DIR_INFORMATION;
+
 typedef struct _FILE_ALL_INFORMATION
 {
   FILE_BASIC_INFORMATION BasicInformation;
@@ -236,19 +352,25 @@ typedef struct _FILE_REPARSE_POINT_INFORMATION
 
 typedef enum _FILE_INFORMATION_CLASS
 {
-  FileDirectoryInformation       = 1,
-  FileFullDirectoryInformation   = 2,
-  FileBothDirectoryInformation   = 3,
-  FileStandardInformation        = 5,
-  FileNameInformation            = 9,
-  FileRenameInformation          = 10,
-  FileNamesInformation           = 12,
-  FileAllInformation             = 18,
-  FileObjectIdInformation        = 29,
-  FileReparsePointInformation    = 33,
-  FileIdBothDirectoryInformation = 37,
-  FileIdFullDirectoryInformation = 38,
-  FileNormalizedNameInformation  = 48,
+  FileDirectoryInformation              = 1,
+  FileFullDirectoryInformation          = 2,
+  FileBothDirectoryInformation          = 3,
+  FileStandardInformation               = 5,
+  FileNameInformation                   = 9,
+  FileRenameInformation                 = 10,
+  FileNamesInformation                  = 12,
+  FileAllInformation                    = 18,
+  FileObjectIdInformation               = 29,
+  FileReparsePointInformation           = 33,
+  FileIdBothDirectoryInformation        = 37,
+  FileIdFullDirectoryInformation        = 38,
+  FileNormalizedNameInformation         = 48,
+  FileIdExtdDirectoryInformation        = 60,
+  FileIdExtdBothDirectoryInformation    = 63,
+  FileId64ExtdDirectoryInformation      = 78,
+  FileId64ExtdBothDirectoryInformation  = 79,
+  FileIdAllExtdDirectoryInformation     = 80,
+  FileIdAllExtdBothDirectoryInformation = 81
 } FILE_INFORMATION_CLASS,
     *PFILE_INFORMATION_CLASS;
 

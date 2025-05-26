@@ -161,8 +161,9 @@ TEST(BoostFilesystemTest, BoostFilesystemTest)
        ++it) {
     contents.push_back(relative(it->path(), data).string());
   }
-  ASSERT_THAT(contents, ::testing::UnorderedElementsAre("docs", "docs\\doc.txt",
-                                                        "docs\\subdocs"));
+  ASSERT_THAT(contents, ::testing::UnorderedElementsAre(
+                            ".gitkeep", "docs", "docs\\doc.txt", "docs\\subdocs",
+                            "docs\\subdocs\\.gitkeep"));
 }
 
 // see https://github.com/ModOrganizer2/modorganizer/issues/2039 for context

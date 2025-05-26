@@ -264,6 +264,8 @@ ULONG StructMinSize(FILE_INFORMATION_CLASS infoClass)
     return sizeof(FILE_OBJECTID_INFORMATION);
   case FileReparsePointInformation:
     return sizeof(FILE_REPARSE_POINT_INFORMATION);
+  case FileIdExtdDirectoryInformation:
+    return sizeof(FILE_ID_EXTD_DIR_INFORMATION);
   default:
     return 0;
   }
@@ -314,6 +316,12 @@ void GetInfoData(LPCVOID address, FILE_INFORMATION_CLASS infoClass, ULONG& offse
   } break;
   case FileReparsePointInformation: {
     offset = sizeof(FILE_REPARSE_POINT_INFORMATION);
+  } break;
+  case FileIdExtdDirectoryInformation: {
+    const auto* info = reinterpret_cast<const FILE_ID_EXTD_DIR_INFORMATION*>(address);
+
+    offset   = info->NextEntryOffset;
+    fileName = std::wstring(info->FileName, info->FileNameLength / sizeof(WCHAR));
   } break;
   default: {
     offset = ULONG_MAX;
@@ -392,6 +400,10 @@ void SetInfoFilename(LPVOID address, FILE_INFORMATION_CLASS infoClass,
     SetInfoFilenameImplSN(reinterpret_cast<FILE_ID_BOTH_DIR_INFORMATION*>(address),
                           fileName);
   } break;
+  case FileIdExtdDirectoryInformation: {
+    SetInfoFilenameImpl(reinterpret_cast<FILE_ID_EXTD_DIR_INFORMATION*>(address),
+                        fileName);
+  } break;
   default: {
     // NOP
   } break;
@@ -418,6 +430,9 @@ void SetInfoOffset(LPVOID address, FILE_INFORMATION_CLASS infoClass, ULONG offse
   } break;
   case FileIdBothDirectoryInformation: {
     reinterpret_cast<FILE_ID_BOTH_DIR_INFORMATION*>(address)->NextEntryOffset = offset;
+  } break;
+  case FileIdExtdDirectoryInformation: {
+    reinterpret_cast<FILE_ID_EXTD_DIR_INFORMATION*>(address)->NextEntryOffset = offset;
   } break;
   default: {
     // NOP
