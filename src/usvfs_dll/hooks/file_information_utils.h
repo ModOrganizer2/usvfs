@@ -41,9 +41,6 @@ DECLARE_HAS_FIELD(ShortName)
 template <FILE_INFORMATION_CLASS fileInformationClass, class FileInformationClass>
 struct FileInformationClassUtilsImpl
 {
-  // minimum required size for the structure
-  std::size_t get_minimum_struct_size() { return sizeof(FileInformationClass); }
-
   static void get_data(LPCVOID address, ULONG& offset, std::wstring& fileName)
   {
     const FileInformationClass* info =
@@ -101,7 +98,7 @@ struct FileInformationClassUtils<FileDirectoryInformation>
 template <>
 struct FileInformationClassUtils<FileFullDirectoryInformation>
     : FileInformationClassUtilsImpl<FileFullDirectoryInformation,
-                                    FILE_ID_FULL_DIR_INFORMATION>
+                                    FILE_FULL_DIR_INFORMATION>
 {};
 template <>
 struct FileInformationClassUtils<FileBothDirectoryInformation>
@@ -123,10 +120,6 @@ struct FileInformationClassUtils<FileRenameInformation>
 template <>
 struct FileInformationClassUtils<FileNamesInformation>
     : FileInformationClassUtilsImpl<FileNamesInformation, FILE_NAMES_INFORMATION>
-{};
-template <>
-struct FileInformationClassUtils<FileAllInformation>
-    : FileInformationClassUtilsImpl<FileAllInformation, FILE_ALL_INFORMATION>
 {};
 template <>
 struct FileInformationClassUtils<FileObjectIdInformation>
@@ -183,6 +176,32 @@ struct FileInformationClassUtils<FileIdAllExtdBothDirectoryInformation>
                                     FILE_ID_ALL_EXTD_BOTH_DIR_INFORMATION>
 {};
 
+// FILE_ALL_INFORMATION needs to be handled differently because it has a field that
+// is itself a structure
+template <>
+struct FileInformationClassUtils<FileAllInformation>
+{
+  static void get_data(LPCVOID address, ULONG& offset, std::wstring& fileName)
+  {
+    FileInformationClassUtils<FileNameInformation>::get_data(
+        &reinterpret_cast<const FILE_ALL_INFORMATION*>(address)->NameInformation,
+        offset, fileName);
+  }
+
+  static void set_offset(LPVOID address, ULONG offset)
+  {
+    // this is a no-op but it's consistent to do that everywhere
+    FileInformationClassUtils<FileNameInformation>::set_offset(
+        &reinterpret_cast<FILE_ALL_INFORMATION*>(address)->NameInformation, offset);
+  }
+
+  static void set_filename(LPVOID address, const std::wstring& fileName)
+  {
+    FileInformationClassUtils<FileNameInformation>::set_filename(
+        &reinterpret_cast<FILE_ALL_INFORMATION*>(address)->NameInformation, fileName);
+  }
+};
+
 }  // namespace usvfs::details
 
 #define _APP_FINFO_CASE(clazz, fn, ...)                                                \
@@ -190,6 +209,7 @@ struct FileInformationClassUtils<FileIdAllExtdBothDirectoryInformation>
     return usvfs::details::FileInformationClassUtils<clazz>::fn(__VA_ARGS__);
 
 #define _APPLY_FILEINFO_FN(fn, ...)                                                    \
+  _APP_FINFO_CASE(FileAllInformation, fn, __VA_ARGS__)                                 \
   _APP_FINFO_CASE(FileDirectoryInformation, fn, __VA_ARGS__)                           \
   _APP_FINFO_CASE(FileFullDirectoryInformation, fn, __VA_ARGS__)                       \
   _APP_FINFO_CASE(FileBothDirectoryInformation, fn, __VA_ARGS__)                       \
@@ -197,7 +217,6 @@ struct FileInformationClassUtils<FileIdAllExtdBothDirectoryInformation>
   _APP_FINFO_CASE(FileNameInformation, fn, __VA_ARGS__)                                \
   _APP_FINFO_CASE(FileRenameInformation, fn, __VA_ARGS__)                              \
   _APP_FINFO_CASE(FileNamesInformation, fn, __VA_ARGS__)                               \
-  _APP_FINFO_CASE(FileAllInformation, fn, __VA_ARGS__)                                 \
   _APP_FINFO_CASE(FileObjectIdInformation, fn, __VA_ARGS__)                            \
   _APP_FINFO_CASE(FileReparsePointInformation, fn, __VA_ARGS__)                        \
   _APP_FINFO_CASE(FileIdBothDirectoryInformation, fn, __VA_ARGS__)                     \
@@ -209,17 +228,6 @@ struct FileInformationClassUtils<FileIdAllExtdBothDirectoryInformation>
   _APP_FINFO_CASE(FileId64ExtdBothDirectoryInformation, fn, __VA_ARGS__)               \
   _APP_FINFO_CASE(FileIdAllExtdDirectoryInformation, fn, __VA_ARGS__)                  \
   _APP_FINFO_CASE(FileIdAllExtdBothDirectoryInformation, fn, __VA_ARGS__)
-
-// minimum required size for the structure
-// std::size_t
-// get_file_information_minimum_struct_size(FILE_INFORMATION_CLASS fileInformationClass)
-// {
-//   switch (fileInformationClass) {
-//     _APPLY_FILEINFO_FN(get_minimum_struct_size, );
-//   default:
-//     return 0;
-//   }
-// }
 
 void GetFileInformationData(FILE_INFORMATION_CLASS fileInformationClass,
                             LPCVOID address, ULONG& offset, std::wstring& fileName)

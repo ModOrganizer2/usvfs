@@ -25,12 +25,8 @@ along with usvfs. If not, see <http://www.gnu.org/licenses/>.
 
 #include <test_helpers.h>
 
-#pragma warning(push, 3)
-#include <gtest/gtest.h>
-#include <iostream>
-
 #include <fstream>
-#pragma warning(pop)
+#include <iostream>
 
 #include <inject.h>
 #include <stringutils.h>
@@ -46,6 +42,9 @@ along with usvfs. If not, see <http://www.gnu.org/licenses/>.
 #include <stringcast.h>
 #include <unicodestring.h>
 #include <usvfs.h>
+
+#include <gmock/gmock-matchers.h>
+#include <gtest/gtest.h>
 
 namespace spd = spdlog;
 
@@ -299,7 +298,7 @@ HANDLE hooked_NtOpenFile(LPCWSTR path, ACCESS_MASK accessMask, ULONG shareAccess
   string.Buffer = stringBuffer;
   lstrcpyW(stringBuffer, L"\\??\\");
   lstrcatW(stringBuffer, path);
-  string.Length         = lstrlenW(stringBuffer) * 2;
+  string.Length         = static_cast<USHORT>(lstrlenW(stringBuffer) * 2);
   string.MaximumLength  = BUFFER_SIZE;
   attributes.ObjectName = &string;
 
@@ -365,6 +364,53 @@ TEST_F(USVFSTest, NtQueryDirectoryFileFindsVirtualFile)
   usvfs::hook_NtClose(hdl);
 }
 
+TEST_F(USVFSTest, NtQueryDirectoryFileExVirtualFile)
+{
+  auto params = defaultUsvfsParams();
+  std::unique_ptr<usvfs::HookContext> ctx(
+      usvfsCreateHookContext(*params, ::GetModuleHandle(nullptr)));
+  usvfs::RedirectionTreeContainer& tree = ctx->redirectionTable();
+
+  tree.addFile(L"C:\\0123456789.txt", usvfs::RedirectionDataLocal(REAL_FILEA));
+  tree.addFile(L"C:\\123456", usvfs::RedirectionDataLocal(REAL_FILEA));
+  tree.addFile(L"C:\\abcdef", usvfs::RedirectionDataLocal(REAL_FILEA));
+  tree.addFile(L"C:\\abcdefghijklmnopqrstuvwxyz.txt",
+               usvfs::RedirectionDataLocal(REAL_FILEA));
+
+  HANDLE hdl =
+      hooked_NtOpenFile(L"C:\\", FILE_GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE,
+                        FILE_DIRECTORY_FILE | FILE_SYNCHRONOUS_IO_NONALERT);
+  ASSERT_NE(INVALID_HANDLE_VALUE, hdl);
+
+  IO_STATUS_BLOCK status;
+
+  constexpr size_t BUFFER_SIZE = 2048;
+  char buffer[BUFFER_SIZE];
+
+  std::vector<std::wstring> foundFiles;
+  while (usvfs::hook_NtQueryDirectoryFileEx(
+             hdl, nullptr, nullptr, nullptr, &status, buffer, BUFFER_SIZE,
+             FileFullDirectoryInformation, 0, nullptr) == STATUS_SUCCESS) {
+    std::size_t offset = 0;
+    while (offset < BUFFER_SIZE) {
+      const auto* info = reinterpret_cast<FILE_FULL_DIR_INFORMATION*>(buffer + offset);
+      foundFiles.emplace_back(info->FileName, info->FileNameLength / sizeof(wchar_t));
+
+      if (info->NextEntryOffset == 0) {
+        break;  // no more entries
+      }
+
+      offset += info->NextEntryOffset;
+    }
+  }
+
+  ASSERT_THAT(foundFiles,
+              ::testing::IsSupersetOf({L"0123456789.txt", L"123456", L"abcdef",
+                                       L"abcdefghijklmnopqrstuvwxyz.txt"}));
+
+  usvfs::hook_NtClose(hdl);
+}
+
 TEST_F(USVFSTest, NtQueryObjectVirtualFile)
 {
   std::wstring c_drive_device;
@@ -405,6 +451,7 @@ TEST_F(USVFSTest, NtQueryObjectVirtualFile)
     IO_STATUS_BLOCK status;
     const auto res = usvfs::hook_NtQueryInformationFile(
         hdl, &status, buffer, sizeof(buffer), FileNameInformation);
+    ASSERT_EQ(STATUS_SUCCESS, res);
     ASSERT_EQ(STATUS_SUCCESS, status.Status);
 
     FILE_NAME_INFORMATION* fileNameInfo =
@@ -471,7 +518,7 @@ TEST_F(USVFSTest, NtQueryObjectVirtualFile)
   {
     // expected length is sizeof struct + size of path (in bytes), including the
     // null-character
-    const ULONG expectedLength =
+    const auto expectedLength =
         sizeof(OBJECT_NAME_INFORMATION) + c_drive_device.size() * 2 + 12 + 2;
     ULONG requiredLength;
     NTSTATUS res;
