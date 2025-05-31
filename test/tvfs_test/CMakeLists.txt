@@ -4,7 +4,7 @@ find_package(GTest CONFIG REQUIRED)
 
 add_executable(tvfs_test main.cpp)
 usvfs_set_test_properties(tvfs_test)
-target_link_libraries(tvfs_test PRIVATE test_utils usvfs_helper GTest::gtest GTest::gtest_main)
+target_link_libraries(tvfs_test PRIVATE test_utils usvfs_helper GTest::gtest GTest::gmock GTest::gtest_main)
 usvfs_target_link_usvfs(tvfs_test)
 
 # tvfs_test uses a private USVFS header so we need to include it manually
