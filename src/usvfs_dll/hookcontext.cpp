@@ -316,8 +316,8 @@ void HookContext::unlockShared(const HookContext* instance)
 
 // deprecated
 //
-extern "C" DLLEXPORT HookContext* __cdecl CreateHookContext(
-    const USVFSParameters& oldParams, HMODULE module)
+extern "C" DLLEXPORT HookContext* __cdecl
+CreateHookContext(const USVFSParameters& oldParams, HMODULE module)
 {
   const usvfsParameters p(oldParams);
   return usvfsCreateHookContext(p, module);
