@@ -102,8 +102,8 @@ TEST(BasicTest, SimpleTest)
     }
 
     const auto doc_txt = data / "docs" / "doc.txt";
-    HandleGuard hdl = CreateFileW(doc_txt.c_str(), GENERIC_READ, 0, nullptr,
-                                  OPEN_EXISTING, FILE_FLAG_BACKUP_SEMANTICS, nullptr);
+    HandleGuard hdl    = CreateFileW(doc_txt.c_str(), GENERIC_READ, 0, nullptr,
+                                     OPEN_EXISTING, FILE_FLAG_BACKUP_SEMANTICS, nullptr);
     ASSERT_NE(INVALID_HANDLE_VALUE, (HANDLE)hdl);
 
     WCHAR filepath[1024];
@@ -134,8 +134,8 @@ TEST(BasicTest, SimpleTest)
     }
 
     const auto info_txt = data / "readme.txt";
-    HandleGuard hdl = CreateFileW(info_txt.c_str(), GENERIC_READ, 0, nullptr,
-                                  OPEN_EXISTING, FILE_FLAG_BACKUP_SEMANTICS, nullptr);
+    HandleGuard hdl     = CreateFileW(info_txt.c_str(), GENERIC_READ, 0, nullptr,
+                                      OPEN_EXISTING, FILE_FLAG_BACKUP_SEMANTICS, nullptr);
     ASSERT_NE(INVALID_HANDLE_VALUE, (HANDLE)hdl);
 
     char buffer[4096];
