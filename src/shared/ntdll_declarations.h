@@ -543,7 +543,7 @@ typedef struct _FILE_NETWORK_OPEN_INFORMATION
 
 // Nt
 
-using NtQueryDirectoryFile_type   = NTSTATUS(WINAPI*)(HANDLE, HANDLE, PIO_APC_ROUTINE,
+using NtQueryDirectoryFile_type = NTSTATUS(WINAPI*)(HANDLE, HANDLE, PIO_APC_ROUTINE,
                                                     PVOID, PIO_STATUS_BLOCK, PVOID,
                                                     ULONG, FILE_INFORMATION_CLASS,
                                                     BOOLEAN, PUNICODE_STRING, BOOLEAN);
@@ -569,7 +569,7 @@ using NtQueryInformationByName_type = NTSTATUS(WINAPI*)(
     ULONG Length, FILE_INFORMATION_CLASS FileInformationClass);
 
 using NtOpenFile_type   = NTSTATUS(WINAPI*)(PHANDLE, ACCESS_MASK, POBJECT_ATTRIBUTES,
-                                          PIO_STATUS_BLOCK, ULONG, ULONG);
+                                            PIO_STATUS_BLOCK, ULONG, ULONG);
 using NtCreateFile_type = NTSTATUS(WINAPI*)(PHANDLE, ACCESS_MASK, POBJECT_ATTRIBUTES,
                                             PIO_STATUS_BLOCK, PLARGE_INTEGER, ULONG,
                                             ULONG, ULONG, ULONG, PVOID, ULONG);
