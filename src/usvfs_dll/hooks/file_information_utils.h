@@ -16,8 +16,8 @@ namespace usvfs::details
 
 #define DECLARE_HAS_FIELD(Field)                                                       \
   template <typename T>                                                                \
-  constexpr auto HasFieldImpl##Field(int)->decltype(std::declval<T>().Field, void(),   \
-                                                    std::true_type())                  \
+  constexpr auto HasFieldImpl##Field(int)                                              \
+      -> decltype(std::declval<T>().Field, void(), std::true_type())                   \
   {                                                                                    \
     return {};                                                                         \
   }                                                                                    \

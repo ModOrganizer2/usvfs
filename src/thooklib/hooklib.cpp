@@ -113,8 +113,8 @@ void WriteLongJump(LPBYTE jumpAddr, LPVOID destination)
   // a working, space-optimized, relative jump to outside the generated code and
   // we do want to optimize this jump
 #if BOOST_ARCH_X86_64
-  intptr_t dist = reinterpret_cast<intptr_t>(destination) -
-                  (reinterpret_cast<intptr_t>(jumpAddr) + 5);
+  intptr_t dist     = reinterpret_cast<intptr_t>(destination) -
+                      (reinterpret_cast<intptr_t>(jumpAddr) + 5);
   int32_t distShort = static_cast<int32_t>(dist);
 #else
   int32_t distShort = reinterpret_cast<intptr_t>(destination) -
