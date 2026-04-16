@@ -167,8 +167,8 @@ void HookManager::installHook(HMODULE module1, HMODULE module2,
     spdlog::get("usvfs")->error("failed to hook {0}: {1}", functionName,
                                 GetErrorString(err));
   } else {
-    m_Stubs.insert(make_pair(funcAddr, functionName));
-    m_Hooks.insert(make_pair(std::string(functionName), handle));
+    m_Stubs.try_emplace(funcAddr, functionName);
+    m_Hooks.try_emplace(std::string(functionName), handle);
     spdlog::get("usvfs")->info("hooked {0} ({1}) in {2} type {3}", functionName,
                                funcAddr, winapi::ansi::getModuleFileName(usedModule),
                                GetHookType(handle));
@@ -213,8 +213,8 @@ void HookManager::installStub(HMODULE module1, HMODULE module2,
     spdlog::get("usvfs")->error("failed to stub {0}: {1}", functionName,
                                 GetErrorString(err));
   } else {
-    m_Stubs.insert(make_pair(funcAddr, functionName));
-    m_Hooks.insert(make_pair(std::string(functionName), handle));
+    m_Stubs.try_emplace(funcAddr, functionName);
+    m_Hooks.try_emplace(std::string(functionName), handle);
     spdlog::get("usvfs")->info("stubbed {0} ({1}) in {2} type {3}", functionName,
                                funcAddr, winapi::ansi::getModuleFileName(usedModule),
                                GetHookType(handle));

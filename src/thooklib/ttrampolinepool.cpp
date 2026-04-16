@@ -474,9 +474,9 @@ LPVOID TrampolinePool::currentBufferAddress(LPVOID addressNear)
   auto lookupAddress = m_Buffers.find(rounded);
 
   if (lookupAddress == m_Buffers.end()) {
-    lookupAddress = m_Buffers.insert(std::make_pair(rounded, BufferList())).first;
+    lookupAddress = m_Buffers.try_emplace(rounded /* automatically emplaces default BufferList() */).first;
   }
-  if (lookupAddress->second.buffers.size() == 0) {
+  if (lookupAddress->second.buffers.empty()) {
     allocateBuffer(addressNear);
   }
 
@@ -503,7 +503,7 @@ TrampolinePool::BufferMap::iterator TrampolinePool::allocateBuffer(LPVOID addres
   LPVOID rounded     = roundAddress(addressNear);
   auto iter          = m_Buffers.find(rounded);
   uintptr_t lowerEnd = reinterpret_cast<uintptr_t>(rounded);
-  if (iter->second.buffers.size() > 0) {
+  if (!iter->second.buffers.empty()) {
     // start searching were we last found a buffer
     lowerEnd = reinterpret_cast<uintptr_t>(*iter->second.buffers.rbegin()) +
                sysInfo.dwPageSize;
@@ -584,8 +584,7 @@ LPVOID TrampolinePool::releaseInt(LPVOID func)
     m_ThreadGuards.reset(new TThreadMap());
   }
 
-  auto iter = m_ThreadGuards->find(func);
-  if (iter == m_ThreadGuards->end()) {
+  if (!m_ThreadGuards->contains(func)) {
     spdlog::get("hooks")->error("failed to release barrier for func {}", func);
     ::SetLastError(lastError);
     return nullptr;

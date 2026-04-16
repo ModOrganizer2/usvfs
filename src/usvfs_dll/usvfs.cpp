@@ -418,7 +418,7 @@ void __cdecl InitHooks(LPVOID parameters, size_t)
     auto context   = manager->context();
     auto exePath   = boost::dll::program_location();
     auto libraries = context->librariesToForceLoad(exePath.filename().c_str());
-    for (auto library : libraries) {
+    for (const auto& library : libraries) {
       if (std::filesystem::exists(library)) {
         const auto ret = LoadLibraryExW(library.c_str(), NULL, 0);
         if (ret) {
@@ -588,9 +588,9 @@ bool assertPathExists(usvfs::RedirectionTreeContainer& table, LPCWSTR path)
   usvfs::RedirectionTree::NodeT* current = table.get();
 
   for (auto iter = p.begin(); iter != p.end(); iter = ush::nextIter(iter, p.end())) {
-    if (current->exists(iter->string().c_str())) {
+    if (current->exists(iter->string())) {
       // subdirectory exists virtually, all good
-      usvfs::RedirectionTree::NodePtrT found = current->node(iter->string().c_str());
+      usvfs::RedirectionTree::NodePtrT found = current->node(iter->string());
       current                                = found.get().get();
     } else {
       // targetPath is relative to the last rerouted "real" path. This means
