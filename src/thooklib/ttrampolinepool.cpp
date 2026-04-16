@@ -474,7 +474,9 @@ LPVOID TrampolinePool::currentBufferAddress(LPVOID addressNear)
   auto lookupAddress = m_Buffers.find(rounded);
 
   if (lookupAddress == m_Buffers.end()) {
-    lookupAddress = m_Buffers.try_emplace(rounded /* automatically emplaces default BufferList() */).first;
+    lookupAddress =
+        m_Buffers.try_emplace(rounded /* automatically emplaces default BufferList() */)
+            .first;
   }
   if (lookupAddress->second.buffers.empty()) {
     allocateBuffer(addressNear);

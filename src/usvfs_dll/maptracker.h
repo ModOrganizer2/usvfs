@@ -221,7 +221,8 @@ public:
     }
   }
 
-  static bool createFakePath(const fs::path& path, LPSECURITY_ATTRIBUTES securityAttributes)
+  static bool createFakePath(const fs::path& path,
+                             LPSECURITY_ATTRIBUTES securityAttributes)
   {
     // sanity and guaranteed recursion end:
     if (!path.has_relative_path())

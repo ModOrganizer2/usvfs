@@ -432,7 +432,8 @@ std::vector<FileResult> quickFindFiles(LPCWSTR directoryName, LPCWSTR pattern)
   return result;
 }
 
-bool createPath(const boost::filesystem::path& path, LPSECURITY_ATTRIBUTES securityAttributes)
+bool createPath(const boost::filesystem::path& path,
+                LPSECURITY_ATTRIBUTES securityAttributes)
 {
   // sanity and guaranteed recursion end:
   if (!path.has_relative_path())
