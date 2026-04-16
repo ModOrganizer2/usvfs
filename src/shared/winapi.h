@@ -542,7 +542,7 @@ std::vector<FileResult> quickFindFiles(LPCWSTR directoryName, LPCWSTR pattern);
  * @return true if the directory (and possibly parent directories) were actually created
  *        and false if the directory already existed. Throws exceptions on failure.
  */
-bool createPath(boost::filesystem::path path,
+bool createPath(const boost::filesystem::path& path,
                 LPSECURITY_ATTRIBUTES securityAttributes = nullptr);
 inline bool createPath(LPCWSTR path, LPSECURITY_ATTRIBUTES securityAttributes = nullptr)
 {

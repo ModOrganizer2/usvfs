@@ -221,7 +221,8 @@ public:
     }
   }
 
-  static bool createFakePath(fs::path path, LPSECURITY_ATTRIBUTES securityAttributes)
+  static bool createFakePath(const fs::path& path,
+                             LPSECURITY_ATTRIBUTES securityAttributes)
   {
     // sanity and guaranteed recursion end:
     if (!path.has_relative_path())
@@ -516,7 +517,7 @@ public:
       auto res = create(context, callContext, inPath);
       if (res.wasRerouted() || !interestingPath(inPath) || !callContext.active() ||
           pathExists(inPath))
-        return std::move(res);
+        return res;
     }
     return createNew(context, callContext, inPath, createPath, securityAttributes);
   }

@@ -442,7 +442,7 @@ private:
     }
 
     const int count = boost::lexical_cast<int>(match[2]);
-    return match[1].str() + std::to_string(count + 1);
+    return std::format("{}{}", match[1].str(), count + 1);
   }
 
   bool unassign(const std::shared_ptr<SharedMemoryT>& shm, TreeMeta* tree)
