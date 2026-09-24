@@ -118,6 +118,12 @@ void addStub(size_t userDataSize, X86Assembler& assembler, bool skipInit,
 
 #if BOOST_ARCH_X86_64
   pushAll(assembler);
+
+  // The hijacked thread's RSP alignment is arbitrary and pushAll only moves it
+  // by a multiple of 16, so that parity is inherited by every call below.
+  assembler.mov(rbp, rsp);
+  assembler.and_(rsp, -16);
+
   // call load library for the actual injection
   assembler.mov(rcx, imm(reinterpret_cast<int64_t>(&remoteData->dllName)));
   assembler.mov(rax, imm((intptr_t)(void*)localData->loadLibrary));
@@ -135,6 +141,7 @@ void addStub(size_t userDataSize, X86Assembler& assembler, bool skipInit,
     assembler.call(rax);
     assembler.add(rsp, 32);
     assembler.int3();*/
+  assembler.mov(rsp, rbp);
   popAll(assembler);
   assembler.ret();
   assembler.bind(Label_DLLLoaded);
@@ -166,6 +173,7 @@ void addStub(size_t userDataSize, X86Assembler& assembler, bool skipInit,
   }
 
   // restore registers
+  assembler.mov(rsp, rbp);
   popAll(assembler);
 #else
 

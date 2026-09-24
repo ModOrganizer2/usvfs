@@ -97,13 +97,15 @@ jobs:
           pattern: usvfs_${{ matrix.config }}_*
 
   test:
-    name: Test USVFS
+    name: Test USVFS (${{ matrix.runner }}, ${{ matrix.arch }}, ${{ matrix.config }})
     needs: merge-artifacts-for-tests
-    runs-on: windows-2022
+    runs-on: ${{ matrix.runner }}
     strategy:
+      fail-fast: false
       matrix:
         config: [Debug, Release]
         arch: [x86, x64]
+        runner: [windows-2022, windows-11-arm]
     steps:
       - uses: actions/checkout@v4
       - uses: actions/download-artifact@master
@@ -135,7 +137,7 @@ jobs:
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: tests-outputs_${{ matrix.config }}_${{ matrix.arch }}
+          name: tests-outputs_${{ runner.arch }}_${{ matrix.config }}_${{ matrix.arch }}
           path: ./test/temp
           if-no-files-found: ignore
           retention-days: 7
