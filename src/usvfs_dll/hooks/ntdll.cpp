@@ -1224,6 +1224,24 @@ NTSTATUS ntdll_mess_NtCreateFile(PHANDLE FileHandle, ACCESS_MASK DesiredAccess,
                           CreateDisposition, CreateOptions, EaBuffer, EaLength);
   }
 
+  // opens of existing files below a recorded missing directory skip the file system
+  const bool mustExist =
+      CreateDisposition == FILE_OPEN && (CreateOptions & FILE_OPEN_BY_FILE_ID) == 0 &&
+      ObjectAttributes->RootDirectory == nullptr && inPath.size() > 6 &&
+      ush::startswith(inPathW, LR"(\??\)") && inPathW[5] == L':';
+  const uint64_t probedGeneration = k32MissingDirTracker.generation();
+  if (mustExist && k32MissingDirTracker.coversPath(inPathW + 4)) {
+    switch (knownMissing(READ_CONTEXT(),
+                         RerouteW::canonizePath(RerouteW::absolutePath(inPathW)))) {
+    case KnownMissing::NameNotFound:
+      return STATUS_OBJECT_NAME_NOT_FOUND;
+    case KnownMissing::PathNotFound:
+      return STATUS_OBJECT_PATH_NOT_FOUND;
+    default:
+      break;
+    }
+  }
+
   DWORD convertedDisposition = OPEN_EXISTING;
   switch (CreateDisposition) {
   case FILE_SUPERSEDE:
@@ -1294,6 +1312,16 @@ NTSTATUS ntdll_mess_NtCreateFile(PHANDLE FileHandle, ACCESS_MASK DesiredAccess,
                          CreateDisposition, CreateOptions, EaBuffer, EaLength);
     POST_REALCALL
     rerouter.updateResult(callContext, res == STATUS_SUCCESS);
+
+    if (mustExist && res == STATUS_OBJECT_PATH_NOT_FOUND && !rerouter.wasRerouted())
+      recordMissingPath(READ_CONTEXT(),
+                        RerouteW::canonizePath(RerouteW::absolutePath(inPathW)),
+                        probedGeneration);
+
+    // a new directory may be one recorded missing
+    if (res == STATUS_SUCCESS && (CreateOptions & FILE_DIRECTORY_FILE) != 0 &&
+        IoStatusBlock->Information == FILE_CREATED)
+      k32MissingDirTracker.clear();
 
     if (res == STATUS_SUCCESS) {
       if (rerouter.newReroute())

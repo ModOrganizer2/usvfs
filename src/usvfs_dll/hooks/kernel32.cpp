@@ -22,6 +22,7 @@ namespace usvfs
 {
 MapTracker k32DeleteTracker;
 MapTracker k32FakeDirTracker;
+MissingDirectoryTracker k32MissingDirTracker;
 }  // namespace usvfs
 
 class CurrentDirectoryTracker
@@ -394,6 +395,13 @@ BOOL WINAPI usvfs::hook_GetFileAttributesExW(LPCWSTR lpFileName,
 
   fs::path canonicalFile = RerouteW::canonizePath(RerouteW::absolutePath(lpFileName));
 
+  if (const DWORD missingError =
+          knownMissingAttributesError(READ_CONTEXT(), canonicalFile)) {
+    callContext.updateLastError(missingError);
+    return FALSE;
+  }
+  const uint64_t probedGeneration = k32MissingDirTracker.generation();
+
   RerouteW reroute =
       RerouteW::create(READ_CONTEXT(), callContext, canonicalFile.c_str());
 
@@ -403,6 +411,8 @@ BOOL WINAPI usvfs::hook_GetFileAttributesExW(LPCWSTR lpFileName,
 
   DWORD originalError = callContext.lastError();
   DWORD fixedError    = originalError;
+  if (!res && originalError == ERROR_PATH_NOT_FOUND && !reroute.wasRerouted())
+    recordMissingPath(READ_CONTEXT(), canonicalFile, probedGeneration);
   // In case the target does not exist the error value varies to differentiate if the
   // parent folder exists (ERROR_FILE_NOT_FOUND) or not (ERROR_PATH_NOT_FOUND).
   // If the original target's parent folder doesn't actually exist it may exist in the
@@ -490,6 +500,13 @@ DWORD WINAPI usvfs::hook_GetFileAttributesW(LPCWSTR lpFileName)
 
   fs::path canonicalFile = RerouteW::canonizePath(RerouteW::absolutePath(lpFileName));
 
+  if (const DWORD missingError =
+          knownMissingAttributesError(READ_CONTEXT(), canonicalFile)) {
+    callContext.updateLastError(missingError);
+    return INVALID_FILE_ATTRIBUTES;
+  }
+  const uint64_t probedGeneration = k32MissingDirTracker.generation();
+
   RerouteW reroute =
       RerouteW::create(READ_CONTEXT(), callContext, canonicalFile.c_str());
 
@@ -500,6 +517,9 @@ DWORD WINAPI usvfs::hook_GetFileAttributesW(LPCWSTR lpFileName)
 
   DWORD originalError = callContext.lastError();
   DWORD fixedError    = originalError;
+  if (res == INVALID_FILE_ATTRIBUTES && originalError == ERROR_PATH_NOT_FOUND &&
+      !reroute.wasRerouted())
+    recordMissingPath(READ_CONTEXT(), canonicalFile, probedGeneration);
   // In case the target does not exist the error value varies to differentiate if the
   // parent folder exists (ERROR_FILE_NOT_FOUND) or not (ERROR_PATH_NOT_FOUND).
   // If the original target's parent folder doesn't actually exist it may exist in the
@@ -727,6 +747,10 @@ BOOL WINAPI usvfs::hook_MoveFileW(LPCWSTR lpExistingFileName, LPCWSTR lpNewFileN
           .PARAM(callContext.lastError());
   }
 
+  // a moved directory may be one recorded missing
+  if (res)
+    k32MissingDirTracker.clear();
+
   HOOK_END
 
   return res;
@@ -860,6 +884,10 @@ BOOL WINAPI usvfs::hook_MoveFileExW(LPCWSTR lpExistingFileName, LPCWSTR lpNewFil
           .PARAM(writeReroute.originalError())
           .PARAM(callContext.lastError());
   }
+
+  // a moved directory may be one recorded missing
+  if (res)
+    k32MissingDirTracker.clear();
 
   HOOK_END
 
@@ -1012,6 +1040,10 @@ BOOL WINAPI usvfs::hook_MoveFileWithProgressW(LPCWSTR lpExistingFileName,
           .PARAM(writeReroute.originalError())
           .PARAM(callContext.lastError());
   }
+
+  // a moved directory may be one recorded missing
+  if (res)
+    k32MissingDirTracker.clear();
 
   HOOK_END
 
@@ -1205,6 +1237,9 @@ DLLEXPORT BOOL WINAPI usvfs::hook_CreateDirectoryW(
   PRE_REALCALL
   res = ::CreateDirectoryW(reroute.fileName(), lpSecurityAttributes);
   POST_REALCALL
+
+  if (res)
+    k32MissingDirTracker.clear();
 
   if (res && reroute.newReroute())
     reroute.insertMapping(WRITE_CONTEXT(), true);

@@ -203,6 +203,61 @@ TEST(SkipFilesTest, SkipFilesTest)
   write_content(data / "readme.skip", "readme.skip in overwrite");
 }
 
+// open an existing file and return GetLastError() (ERROR_SUCCESS if it opened)
+DWORD open_error(const std::filesystem::path& path)
+{
+  HandleGuard hdl = CreateFileW(path.c_str(), GENERIC_READ, FILE_SHARE_READ, nullptr,
+                                OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, nullptr);
+  return (HANDLE)hdl == INVALID_HANDLE_VALUE ? GetLastError() : ERROR_SUCCESS;
+}
+
+DWORD attributes_error(const std::filesystem::path& path)
+{
+  return GetFileAttributesW(path.c_str()) == INVALID_FILE_ATTRIBUTES ? GetLastError()
+                                                                     : ERROR_SUCCESS;
+}
+
+TEST(MissingDirectoryTest, MissingDirectoryTest)
+{
+  const auto data = parameters.data();
+
+  // later lookups are answered from the record and must match the first one
+  const auto assert_stable = [](const std::filesystem::path& path) {
+    const DWORD open = open_error(path), attributes = attributes_error(path);
+    ASSERT_NE(ERROR_SUCCESS, open);
+    ASSERT_NE(ERROR_SUCCESS, attributes);
+    for (int i = 0; i < 3; ++i) {
+      ASSERT_EQ(open, open_error(path));
+      ASSERT_EQ(attributes, attributes_error(path));
+    }
+  };
+
+  // data/DATA does not exist anywhere
+  const auto doubled = data / "DATA" / "sound" / "voice" / "x.fuz";
+  assert_stable(doubled);
+  ASSERT_EQ(ERROR_PATH_NOT_FOUND, open_error(doubled));
+  ASSERT_EQ(ERROR_PATH_NOT_FOUND, attributes_error(doubled));
+  assert_stable(data / "DATA");
+
+  // data/sound only exists in mod1
+  const auto voice = data / "sound" / "voice";
+  assert_stable(voice / "missing.fuz");
+  ASSERT_EQ(ERROR_FILE_NOT_FOUND, attributes_error(voice / "missing.fuz"));
+
+  // virtual files below a directory recorded missing on disk are still found
+  ASSERT_EQ(ERROR_SUCCESS, open_error(voice / "a.fuz"));
+  ASSERT_EQ(ERROR_SUCCESS, attributes_error(voice / "a.fuz"));
+
+  // files and directories created after the record are visible immediately
+  write_content(voice / "new.fuz", "new.fuz in overwrite");
+  ASSERT_EQ(ERROR_SUCCESS, open_error(voice / "new.fuz"));
+
+  ASSERT_TRUE(CreateDirectoryW((data / "DATA").c_str(), nullptr));
+  write_content(data / "DATA" / "new.txt", "new.txt in overwrite");
+  ASSERT_EQ(ERROR_SUCCESS, open_error(data / "DATA" / "new.txt"));
+  ASSERT_EQ(ERROR_PATH_NOT_FOUND, open_error(doubled));
+}
+
 int main(int argc, char* argv[])
 {
   testing::InitGoogleTest(&argc, argv);

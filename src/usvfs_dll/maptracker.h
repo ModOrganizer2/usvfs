@@ -89,6 +89,157 @@ private:
 extern MapTracker k32DeleteTracker;
 extern MapTracker k32FakeDirTracker;
 
+// Real directories below mapped folders that were found missing on disk; a path below
+// one of them can only exist in the redirection tree.
+class MissingDirectoryTracker
+{
+public:
+  static constexpr ULONGLONG LIFETIME_MS = 2000;
+
+  // incremented by clear(), so record() can drop entries probed before it
+  uint64_t generation() const { return m_Generation.load(std::memory_order_acquire); }
+
+  bool coversPath(const std::wstring& path) const
+  {
+    if (m_Count.load(std::memory_order_relaxed) == 0) {
+      return false;
+    }
+
+    const std::wstring key = foldCase(path);
+    const ULONGLONG now    = GetTickCount64();
+
+    std::shared_lock<std::shared_mutex> lock(m_Mutex);
+    size_t end = key.size();
+    while (end > 3) {  // "c:\" is the shortest root
+      auto iter = m_Map.find(std::wstring_view(key).substr(0, end));
+      if (iter != m_Map.end() && iter->second > now) {
+        return true;
+      }
+      end = key.find_last_of(L'\\', end - 1);
+      if (end == std::wstring::npos) {
+        break;
+      }
+    }
+    return false;
+  }
+
+  void record(const std::wstring& directory, uint64_t probedGeneration)
+  {
+    std::unique_lock<std::shared_mutex> lock(m_Mutex);
+    if (probedGeneration != m_Generation.load(std::memory_order_acquire)) {
+      return;
+    }
+    if (m_Map.size() >= MAX_ENTRIES) {
+      m_Map.clear();
+    }
+    m_Map[foldCase(directory)] = GetTickCount64() + LIFETIME_MS;
+    m_Count.store(m_Map.size(), std::memory_order_relaxed);
+  }
+
+  void clear()
+  {
+    std::unique_lock<std::shared_mutex> lock(m_Mutex);
+    m_Generation.fetch_add(1, std::memory_order_acq_rel);
+    m_Map.clear();
+    m_Count.store(0, std::memory_order_relaxed);
+  }
+
+private:
+  static constexpr size_t MAX_ENTRIES = 4096;
+
+  // ASCII-only, like the redirection tree's comparison
+  static std::wstring foldCase(std::wstring path)
+  {
+    for (wchar_t& c : path) {
+      if (c >= L'A' && c <= L'Z') {
+        c = c - L'A' + L'a';
+      } else if (c == L'/') {
+        c = L'\\';
+      }
+    }
+    while (path.size() > 3 && path.back() == L'\\') {
+      path.pop_back();
+    }
+    return path;
+  }
+
+  struct Hash
+  {
+    using is_transparent = void;
+    size_t operator()(std::wstring_view s) const
+    {
+      return std::hash<std::wstring_view>{}(s);
+    }
+  };
+
+  mutable std::shared_mutex m_Mutex;
+  // directory -> expiry tick
+  std::unordered_map<std::wstring, ULONGLONG, Hash, std::equal_to<>> m_Map;
+  std::atomic<size_t> m_Count{0};
+  std::atomic<uint64_t> m_Generation{0};
+};
+
+extern MissingDirectoryTracker k32MissingDirTracker;
+
+enum class KnownMissing
+{
+  Unknown,
+  NameNotFound,  // parent directory exists on disk
+  PathNotFound   // parent directory is missing on disk too
+};
+
+// what the file system would report for the unredirected path, if the record knows
+static inline KnownMissing knownMissing(const HookContext::ConstPtr& context,
+                                        const fs::path& path)
+{
+  if (!k32MissingDirTracker.coversPath(path.wstring()) ||
+      context->redirectionTable()->findNode(path).get() != nullptr) {
+    return KnownMissing::Unknown;
+  }
+
+  return k32MissingDirTracker.coversPath(path.parent_path().wstring())
+             ? KnownMissing::PathNotFound
+             : KnownMissing::NameNotFound;
+}
+
+// like their hooks, GetFileAttributes(Ex)W report "file not found" in virtual folders
+static inline DWORD knownMissingAttributesError(const HookContext::ConstPtr& context,
+                                                const fs::path& path)
+{
+  switch (knownMissing(context, path)) {
+  case KnownMissing::NameNotFound:
+    return ERROR_FILE_NOT_FOUND;
+  case KnownMissing::PathNotFound: {
+    const auto parent = context->redirectionTable()->findNode(path.parent_path());
+    return parent.get() != nullptr && parent->isDirectory() &&
+                   !parent->data().linkTarget.empty()
+               ? ERROR_FILE_NOT_FOUND
+               : ERROR_PATH_NOT_FOUND;
+  }
+  default:
+    return ERROR_SUCCESS;
+  }
+}
+
+// after ERROR_PATH_NOT_FOUND, records the highest missing directory below a mapped one
+static inline void recordMissingPath(const HookContext::ConstPtr& context,
+                                     const fs::path& path, uint64_t probedGeneration)
+{
+  fs::path missing;
+  for (fs::path dir = path.parent_path(); dir.has_relative_path();
+       dir          = dir.parent_path()) {
+    if (pathExists(dir.c_str())) {
+      const auto node = context->redirectionTable()->findNode(dir);
+      if (!missing.empty() && node.get() != nullptr && node->isDirectory() &&
+          !node->data().linkTarget.empty()) {
+        k32MissingDirTracker.record(missing.wstring(), probedGeneration);
+      }
+      return;
+    }
+    missing = dir;
+  }
+}
+
 class RerouteW
 {
   std::wstring m_Buffer{};
