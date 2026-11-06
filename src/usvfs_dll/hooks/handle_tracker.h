@@ -1,17 +1,21 @@
 #pragma once
 
 #include <cstring>
-#include <shared_mutex>
-#include <unordered_map>
+#include <memory>
+#include <utility>
 
 #include <ntdll_declarations.h>
 #include <unicodestring.h>
+
+#include "handle_registry.h"
 
 inline bool isValidHandle(HANDLE handle)
 {
   return handle && handle != INVALID_HANDLE_VALUE;
 }
 
+// The paths that handles were opened with, for the hooks that query a handle for its
+// path, or open a path relative to it.
 class HandleTracker
 {
 public:
@@ -22,37 +26,18 @@ public:
 
   info_type lookup(handle_type handle) const
   {
-    if (isValidHandle(handle)) {
-      std::shared_lock<std::shared_mutex> lock(m_mutex);
-      auto find = m_map.find(handle);
-      if (find != m_map.end())
-        return find->second;
-    }
-    return info_type();
+    // copied out of the shared path, after the lock of the registry is released
+    const auto info = m_paths.find(handle);
+    return info ? *info : info_type();
   }
 
-  void insert(handle_type handle, const info_type& info)
+  void insert(handle_type handle, info_type info)
   {
-    if (!isValidHandle(handle))
-      return;
-    std::unique_lock<std::shared_mutex> lock(m_mutex);
-    m_map[handle] = info;
+    m_paths.insert(handle, std::make_shared<const info_type>(std::move(info)));
   }
 
-  void erase(handle_type handle)
-  {
-    if (!isValidHandle(handle))
-      return;
-    // looked up under the shared lock first, as every handle closed comes here and few
-    // are tracked
-    {
-      std::shared_lock<std::shared_mutex> lock(m_mutex);
-      if (!m_map.contains(handle))
-        return;
-    }
-    std::unique_lock<std::shared_mutex> lock(m_mutex);
-    m_map.erase(handle);
-  }
+  // Wait-free, so that NtClose can call it wherever it is called (see HandleRegistry).
+  void erase(handle_type handle) noexcept { m_paths.erase(handle); }
 
 private:
   void insert_current_directory()
@@ -76,8 +61,9 @@ private:
     }
   }
 
-  mutable std::shared_mutex m_mutex;
-  std::unordered_map<handle_type, info_type> m_map;
+  HandleRegistry<const info_type> m_paths;
 };
 
-extern HandleTracker ntdllHandleTracker;
+// Never destroyed, so that hooks still running while the DLL unloads do not touch a
+// destroyed tracker.
+extern HandleTracker& ntdllHandleTracker;

@@ -28,12 +28,18 @@ NTSTATUS queryNative(const DirectoryQuery& query);
 // and in the status block.
 NTSTATUS queryDirectory(const DirectoryQuery& query);
 
-// Whether the calling thread is opening or closing a handle of a directory scan, which
-// the NtOpenFile and NtClose hooks then pass straight to ntdll.
+// Whether the calling thread is opening a directory for a directory scan, which the
+// NtOpenFile hook then passes straight to ntdll.
 bool isInternalDirectoryIo();
 
 // Releases the scan of a closed handle, or of a handle value just opened again, as a
 // handle closed where the hooks do not see it leaves its scan behind:
 // DuplicateHandle with DUPLICATE_CLOSE_SOURCE into another process closes it in the
-// kernel. Returns whether the handle had a scan.
-bool eraseDirectoryScan(HANDLE handle);
+// kernel. Returns whether the handle had a scan. Wait-free, for NtClose: the scan is
+// destroyed by the next query or by destroyErasedDirectoryScans.
+bool eraseDirectoryScan(HANDLE handle) noexcept;
+
+// Destroys the scans that eraseDirectoryScan released, closing the handles they hold,
+// unless another thread holds the lock of the scans. Not for NtClose, as destroying a
+// scan closes handles and frees memory.
+void destroyErasedDirectoryScans();

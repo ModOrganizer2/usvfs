@@ -46,7 +46,7 @@ public:
   {}
 };
 
-HandleTracker ntdllHandleTracker;
+HandleTracker& ntdllHandleTracker = *new HandleTracker;
 
 UnicodeString CreateUnicodeString(const OBJECT_ATTRIBUTES* objectAttributes)
 {
@@ -619,6 +619,7 @@ NTSTATUS WINAPI usvfs::hook_NtOpenFile(PHANDLE FileHandle, ACCESS_MASK DesiredAc
                                        IoStatusBlock, ShareAccess, OpenOptions);
   if (res >= 0 && FileHandle) {
     eraseDirectoryScan(*FileHandle);
+    destroyErasedDirectoryScans();
   }
   if (res >= 0 && ObjectAttributes && FileHandle &&
       GetFileType(*FileHandle) == FILE_TYPE_DISK)
@@ -781,6 +782,7 @@ NTSTATUS WINAPI usvfs::hook_NtCreateFile(PHANDLE FileHandle, ACCESS_MASK Desired
                                          EaBuffer, EaLength);
   if (res >= 0 && FileHandle) {
     eraseDirectoryScan(*FileHandle);
+    destroyErasedDirectoryScans();
   }
   if (res >= 0 && ObjectAttributes && FileHandle &&
       GetFileType(*FileHandle) == FILE_TYPE_DISK)
@@ -790,30 +792,15 @@ NTSTATUS WINAPI usvfs::hook_NtCreateFile(PHANDLE FileHandle, ACCESS_MASK Desired
 
 NTSTATUS WINAPI usvfs::hook_NtClose(HANDLE Handle)
 {
-  if (isInternalDirectoryIo()) {
-    return ::NtClose(Handle);
-  }
-  PreserveGetLastError ntFunctionsDoNotChangeGetLastError;
-
-  NTSTATUS res = STATUS_NO_SUCH_FILE;
-
-  HOOK_START_GROUP(MutExHookGroup::ALL_GROUPS)
-  // Not guarded by the file type: GetFileType takes a system call on every close, and
-  // both are cheap no-ops for the handles they do not hold, which are nearly all.
-  const bool log = eraseDirectoryScan(Handle);
+  // Runs wherever NtClose is called: under the lock of the process heap, inside ntdll,
+  // or while a library installing hooks holds every other thread suspended. So it takes
+  // no lock, allocates nothing and logs nothing, and calls nothing that could wait for
+  // another thread; erasing from the registries is wait-free (see HandleRegistry). Not
+  // in a hook call context either, as making one allocates on the first hook a thread
+  // calls.
+  eraseDirectoryScan(Handle);
   ntdllHandleTracker.erase(Handle);
-
-  PRE_REALCALL
-  res = ::NtClose(Handle);
-  POST_REALCALL
-
-  if (log) {
-    LOG_CALL().PARAM(Handle).PARAMWRAP(res);
-  }
-
-  HOOK_END
-
-  return res;
+  return ::NtClose(Handle);
 }
 
 NTSTATUS WINAPI usvfs::hook_NtQueryAttributesFile(

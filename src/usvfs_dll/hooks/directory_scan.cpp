@@ -10,7 +10,6 @@
 #include <memory>
 #include <mutex>
 #include <optional>
-#include <shared_mutex>
 #include <span>
 #include <string_view>
 #include <unordered_map>
@@ -28,6 +27,7 @@
 #include "../hookcontext.h"
 
 #include "directory_records.h"
+#include "handle_registry.h"
 #include "handle_tracker.h"
 
 namespace ulog = usvfs::log;
@@ -90,10 +90,10 @@ private:
 };
 
 // Marks the calling thread as doing I/O of the scan itself while it lives: the
-// NtOpenFile and NtClose hooks then pass the calls straight to ntdll, so that the
-// handles of the scan are neither rerouted nor tracked, and their opening and closing
-// takes no lock of the hook context. A count rather than a flag, so that a scope
-// nested in another one does not end it.
+// NtOpenFile hook then passes the calls straight to ntdll, so that the directories the
+// scan opens are neither rerouted nor tracked, and opening them takes no lock of the
+// hook context. A count rather than a flag, so that a scope nested in another one does
+// not end it.
 //
 // The count is kept in a Win32 TLS slot rather than in a thread_local, as the
 // trampolines and the hook stack keep their state: the hooks run on every thread of
@@ -179,7 +179,6 @@ public:
   void reset()
   {
     if (isValid()) {
-      const InternalIoScope internal;
       if (!::CloseHandle(m_handle)) {
         spdlog::get("hooks")->warn("failed to close handle {0:x}: {1}",
                                    reinterpret_cast<std::uintptr_t>(m_handle),
@@ -833,8 +832,8 @@ private:
   bool m_isFirstCall;
 };
 
-// The scans of all directory handles. The lock is a leaf: nothing else is called
-// while holding it, and no scan is destroyed under it.
+// The scans of all directory handles. Erasing a scan leaves it to the next query, or
+// to destroyErased, to destroy (see HandleRegistry), as NtClose erases.
 class DirectoryScans
 {
 public:
@@ -845,7 +844,7 @@ public:
   // so its regular entries start over only where it reads them through its own handle.
   std::shared_ptr<DirectoryScan> scanFor(const DirectoryQuery& query)
   {
-    std::shared_ptr<DirectoryScan> current = find(query.handle);
+    std::shared_ptr<DirectoryScan> current = m_scans.find(query.handle);
     if (current && !query.isRestart() && current->isFromCurrentContext()) {
       return current;
     }
@@ -862,45 +861,25 @@ public:
     // whenever NtQueryDirectoryFile is called another time on the same handle,
     // this (expensive) construction would be run again.
     //
-    // Constructed without the lock, since construction takes the hook context
-    // lock and reenters hooks. Declared before the lock, so that a scan that is
-    // unused or replaced is destroyed after unlocking.
+    // Constructed without the lock of the registry, since construction takes the hook
+    // context lock and reenters hooks.
     auto scan = std::make_shared<DirectoryScan>(query, current.get());
-    std::unique_lock lock(m_mutex);
-    const auto [entry, isInserted] = m_scans.try_emplace(query.handle, scan);
-    if (!isInserted && (query.isRestart() || !entry->second->isFromCurrentContext())) {
-      entry->second.swap(scan);
-    }
     // concurrent first queries on one handle, or concurrent replacements of an outdated
     // scan: the first scan inserted wins
-    return entry->second;
+    return m_scans.insertUnless(query.handle, std::move(scan),
+                                [&](const std::shared_ptr<DirectoryScan>& inserted) {
+                                  return !query.isRestart() &&
+                                         inserted->isFromCurrentContext();
+                                });
   }
 
-  // Removes the scan of a handle and returns it, so that the caller destroys it
-  // after the lock is released. Returns an empty pointer if the handle has none.
-  std::shared_ptr<DirectoryScan> erase(HANDLE handle)
-  {
-    // looked up under the shared lock first, as every handle opened and closed comes
-    // here and few have a scan
-    if (!find(handle)) {
-      return nullptr;
-    }
-    std::unique_lock lock(m_mutex);
-    auto entry = m_scans.extract(handle);
-    return entry ? std::move(entry.mapped()) : nullptr;
-  }
+  // Wait-free, as NtClose calls it (see HandleRegistry).
+  bool erase(HANDLE handle) noexcept { return m_scans.erase(handle); }
+
+  void destroyErased() { m_scans.destroyErased(); }
 
 private:
-  // Returns the scan of a handle, or an empty pointer if it has none.
-  std::shared_ptr<DirectoryScan> find(HANDLE handle) const
-  {
-    std::shared_lock lock(m_mutex);
-    const auto entry = m_scans.find(handle);
-    return entry != m_scans.end() ? entry->second : nullptr;
-  }
-
-  mutable std::shared_mutex m_mutex;
-  std::unordered_map<HANDLE, std::shared_ptr<DirectoryScan>> m_scans;
+  HandleRegistry<DirectoryScan> m_scans;
 };
 
 // Shared by both query hooks and NtClose. Never destroyed, so that hooks still
@@ -1309,8 +1288,13 @@ NTSTATUS queryDirectory(const DirectoryQuery& query)
   return directoryScans.scanFor(query)->query(query);
 }
 
-bool eraseDirectoryScan(HANDLE handle)
+bool eraseDirectoryScan(HANDLE handle) noexcept
 {
   // a query still running on the scan keeps it, and its handle, open until it returns
-  return directoryScans.erase(handle) != nullptr;
+  return directoryScans.erase(handle);
+}
+
+void destroyErasedDirectoryScans()
+{
+  directoryScans.destroyErased();
 }
