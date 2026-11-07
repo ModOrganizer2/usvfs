@@ -33,7 +33,6 @@ along with usvfs. If not, see <http://www.gnu.org/licenses/>.
 #include <boost/config/compiler/gcc.hpp>
 #endif
 #include <boost/predef.h>
-#include <boost/thread.hpp>
 #include <mutex>
 
 // #include <boost/thread/mutex.hpp>
@@ -126,6 +125,13 @@ public:
   ///
   void forceUnlockBarrier();
 
+  ///
+  /// \brief releases the barrier state of the calling thread, which is exiting; call
+  /// it on DLL_THREAD_DETACH. Hooks the thread calls afterwards go straight to the
+  /// original function, as a barrier state they made again would never be released.
+  ///
+  static void releaseThreadState();
+
 private:
   struct BufferList
   {
@@ -205,9 +211,6 @@ private:
   bool m_FullBlock{false};
 
   BufferMap m_Buffers;
-
-  typedef std::map<void*, void*> TThreadMap;
-  boost::thread_specific_ptr<TThreadMap> m_ThreadGuards;
 
   LPVOID m_BarrierAddr;
   LPVOID m_ReleaseAddr;
