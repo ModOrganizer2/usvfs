@@ -22,46 +22,61 @@ along with usvfs. If not, see <http://www.gnu.org/licenses/>.
 #include "hookcontext.h"
 #include <logging.h>
 
+#include <climits>
+#include <cstdint>
+
 namespace usvfs
 {
 
+// The hook groups active on each thread, kept as the bits of the value of a TLS slot.
+// Nothing is allocated per thread, so nothing needs freeing when a thread exits, and
+// hooks running after that cannot leave behind state that is never freed.
 class HookStack
 {
 public:
-  static HookStack& instance()
+  // Marks the group active on the calling thread. Returns false if it or ALL_GROUPS
+  // already is, or if no TLS slot was left, in which case no hook becomes active.
+  static bool setGroup(MutExHookGroup group)
   {
-    PreserveGetLastError boostChangesGetLastError;
-    if (s_Instance.get() == nullptr) {
-      s_Instance.reset(new HookStack());
-    }
-    return *s_Instance.get();
-  }
-
-  bool setGroup(MutExHookGroup group)
-  {
-    if (m_ActiveGroups.test(static_cast<size_t>(group)) ||
-        m_ActiveGroups.test(static_cast<size_t>(MutExHookGroup::ALL_GROUPS))) {
+    if (s_slot == TLS_OUT_OF_INDEXES) {
       return false;
-    } else {
-      m_ActiveGroups.set(static_cast<size_t>(group), true);
-      return true;
     }
+    const uintptr_t groups = activeGroups();
+    if ((groups & (bitOf(group) | bitOf(MutExHookGroup::ALL_GROUPS))) != 0) {
+      return false;
+    }
+    ::TlsSetValue(s_slot, reinterpret_cast<LPVOID>(groups | bitOf(group)));
+    return true;
   }
 
-  void unsetGroup(MutExHookGroup group)
+  static void unsetGroup(MutExHookGroup group)
   {
-    m_ActiveGroups.set(static_cast<size_t>(group), false);
+    if (s_slot == TLS_OUT_OF_INDEXES) {
+      return;
+    }
+    ::TlsSetValue(s_slot, reinterpret_cast<LPVOID>(activeGroups() & ~bitOf(group)));
   }
 
 private:
-  HookStack() {}
+  static_assert(static_cast<size_t>(MutExHookGroup::LAST) <=
+                    sizeof(uintptr_t) * CHAR_BIT,
+                "the hook groups must fit in the value of a TLS slot");
 
-private:
-  static boost::thread_specific_ptr<HookStack> s_Instance;
-  std::bitset<static_cast<size_t>(MutExHookGroup::LAST)> m_ActiveGroups;
+  static uintptr_t bitOf(MutExHookGroup group)
+  {
+    return uintptr_t{1} << static_cast<int>(group);
+  }
+
+  static uintptr_t activeGroups()
+  {
+    PreserveGetLastError tlsGetValueClearsLastError;
+    return reinterpret_cast<uintptr_t>(::TlsGetValue(s_slot));
+  }
+
+  static const DWORD s_slot;
 };
 
-boost::thread_specific_ptr<HookStack> HookStack::s_Instance;
+const DWORD HookStack::s_slot = ::TlsAlloc();
 
 HookCallContext::HookCallContext() : m_Active(true), m_Group(MutExHookGroup::NO_GROUP)
 {
@@ -69,7 +84,7 @@ HookCallContext::HookCallContext() : m_Active(true), m_Group(MutExHookGroup::NO_
 }
 
 HookCallContext::HookCallContext(MutExHookGroup group)
-    : m_Active(HookStack::instance().setGroup(group)), m_Group(group)
+    : m_Active(HookStack::setGroup(group)), m_Group(group)
 {
   updateLastError();
 }
@@ -77,7 +92,7 @@ HookCallContext::HookCallContext(MutExHookGroup group)
 HookCallContext::~HookCallContext()
 {
   if (m_Active && (m_Group != MutExHookGroup::NO_GROUP)) {
-    HookStack::instance().unsetGroup(m_Group);
+    HookStack::unsetGroup(m_Group);
   }
   SetLastError(m_LastError);
 }
@@ -99,13 +114,13 @@ bool HookCallContext::active() const
 
 FunctionGroupLock::FunctionGroupLock(MutExHookGroup group) : m_Group(group)
 {
-  m_Active = HookStack::instance().setGroup(m_Group);
+  m_Active = HookStack::setGroup(m_Group);
 }
 
 FunctionGroupLock::~FunctionGroupLock()
 {
   if (m_Active) {
-    HookStack::instance().unsetGroup(m_Group);
+    HookStack::unsetGroup(m_Group);
   }
 }
 

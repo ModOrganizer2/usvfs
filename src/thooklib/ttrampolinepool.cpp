@@ -24,6 +24,8 @@ along with usvfs. If not, see <http://www.gnu.org/licenses/>.
 // #include <boost/thread/lock_guard.hpp>
 #include "udis86wrapper.h"
 
+#include <cstdint>
+
 using namespace asmjit;
 #if BOOST_ARCH_X86_64
 using namespace x86;
@@ -38,10 +40,48 @@ namespace HookLib
 
 TrampolinePool* TrampolinePool::s_Instance = nullptr;
 
+namespace
+{
+
+  // the barrier of each hook running on a thread, with the return address of its caller
+  typedef std::map<void*, void*> ThreadGuards;
+
+  // Holds the guards of each thread, reached without implicit TLS, which the loader
+  // does not set up on every thread a hook may run on.
+  const DWORD threadGuardsSlot = ::TlsAlloc();
+
+  // left in the slot of a thread that released its guards on exit
+  ThreadGuards* const RELEASED_GUARDS = reinterpret_cast<ThreadGuards*>(UINTPTR_MAX);
+
+  // Returns the guards of the calling thread, made on first use; nullptr once the
+  // thread released them on exit, or if no TLS slot was left.
+  ThreadGuards* threadGuards()
+  {
+    if (threadGuardsSlot == TLS_OUT_OF_INDEXES) {
+      return nullptr;
+    }
+    auto* guards = static_cast<ThreadGuards*>(::TlsGetValue(threadGuardsSlot));
+    if (guards == RELEASED_GUARDS) {
+      return nullptr;
+    }
+    if (guards == nullptr) {
+      guards = new ThreadGuards();
+      ::TlsSetValue(threadGuardsSlot, guards);
+    }
+    return guards;
+  }
+
+}  // namespace
+
 TrampolinePool::TrampolinePool() : m_MaxTrampolineSize(sizeof(LPVOID))
 {
   m_BarrierAddr = &TrampolinePool::barrier;
   m_ReleaseAddr = &TrampolinePool::release;
+
+  if (threadGuardsSlot == TLS_OUT_OF_INDEXES) {
+    spdlog::get("usvfs")->critical(
+        "no TLS slot is left for the hook barrier, hooks will not run");
+  }
 
   SYSTEM_INFO sysInfo;
   ::ZeroMemory(&sysInfo, sizeof(SYSTEM_INFO));
@@ -69,9 +109,6 @@ void TrampolinePool::initialize()
 void TrampolinePool::setBlock(bool block)
 {
   m_FullBlock = block;
-  if (m_ThreadGuards.get() == nullptr) {
-    m_ThreadGuards.reset(new TThreadMap());
-  }
 }
 
 #if BOOST_ARCH_X86_64
@@ -486,11 +523,25 @@ LPVOID TrampolinePool::currentBufferAddress(LPVOID addressNear)
 
 void TrampolinePool::forceUnlockBarrier()
 {
-  if (m_ThreadGuards.get() != nullptr) {
-    for (auto funcId : *m_ThreadGuards) {
-      (*m_ThreadGuards)[funcId.first] = nullptr;
+  if (ThreadGuards* guards = threadGuards()) {
+    for (auto& guard : *guards) {
+      guard.second = nullptr;
     }
-  }  // else no barriers to unlock
+  }
+}
+
+void TrampolinePool::releaseThreadState()
+{
+  if (threadGuardsSlot == TLS_OUT_OF_INDEXES) {
+    return;
+  }
+  const DWORD lastError = ::GetLastError();
+  auto* guards          = static_cast<ThreadGuards*>(::TlsGetValue(threadGuardsSlot));
+  ::TlsSetValue(threadGuardsSlot, RELEASED_GUARDS);
+  if (guards != RELEASED_GUARDS) {
+    delete guards;
+  }
+  ::SetLastError(lastError);
 }
 
 TrampolinePool::BufferMap::iterator TrampolinePool::allocateBuffer(LPVOID addressNear)
@@ -564,14 +615,15 @@ LPVOID TrampolinePool::barrierInt(LPVOID func)
     return nullptr;
   }
 
-  if (m_ThreadGuards.get() == nullptr) {
-    m_ThreadGuards.reset(new TThreadMap());
+  ThreadGuards* guards = threadGuards();
+  if (guards == nullptr) {
+    return nullptr;
   }
 
-  auto iter = m_ThreadGuards->find(func);
-  if ((iter == m_ThreadGuards->end()) || (iter->second == nullptr)) {
-    (*m_ThreadGuards)[func] = reinterpret_cast<LPVOID>(1);
-    return &(*m_ThreadGuards)[func];
+  auto iter = guards->find(func);
+  if ((iter == guards->end()) || (iter->second == nullptr)) {
+    (*guards)[func] = reinterpret_cast<LPVOID>(1);
+    return &(*guards)[func];
   } else {
     return nullptr;
   }
@@ -579,20 +631,16 @@ LPVOID TrampolinePool::barrierInt(LPVOID func)
 
 LPVOID TrampolinePool::releaseInt(LPVOID func)
 {
-  DWORD lastError = GetLastError();
-  if (m_ThreadGuards.get() == nullptr) {
-    m_ThreadGuards.reset(new TThreadMap());
-  }
-
-  auto iter = m_ThreadGuards->find(func);
-  if (iter == m_ThreadGuards->end()) {
+  DWORD lastError      = GetLastError();
+  ThreadGuards* guards = threadGuards();
+  if (guards == nullptr || guards->find(func) == guards->end()) {
     spdlog::get("hooks")->error("failed to release barrier for func {}", func);
     ::SetLastError(lastError);
     return nullptr;
   }
 
-  LPVOID res              = (*m_ThreadGuards)[func];
-  (*m_ThreadGuards)[func] = nullptr;
+  LPVOID res      = (*guards)[func];
+  (*guards)[func] = nullptr;
 
   ::SetLastError(lastError);
   return res;

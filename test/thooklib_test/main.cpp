@@ -225,6 +225,80 @@ TEST_F(HookingTest, Threading)
   RemoveHook(hook);
 }
 
+// returns an NTSTATUS, which windows.h does not declare
+using NtCloseFunction = LONG(WINAPI*)(HANDLE);
+
+// the export, which the hook patches: calling it from the hook reaches the original
+// function through the barrier
+static NtCloseFunction exportedNtClose = nullptr;
+
+LONG WINAPI THNtClose(HANDLE handle)
+{
+  return exportedNtClose(handle);
+}
+
+TEST_F(HookingTest, ExitedThreadsLeaveNoHandles)
+{
+  // each thread enters the barrier and exits while NtClose is hooked, as usvfs hooks
+  // it, so that whatever the barrier keeps for the thread is released through a hook
+  static const int NUM_THREADS = 200;
+
+  HMODULE ntdllMod = GetModuleHandleA("ntdll.dll");
+  exportedNtClose =
+      reinterpret_cast<NtCloseFunction>(GetProcAddress(ntdllMod, "NtClose"));
+  HOOKHANDLE closeHook = InstallHook(ntdllMod, "NtClose", THNtClose);
+  ASSERT_NE(INVALID_HOOK, closeHook);
+  HMODULE k32Mod      = GetModuleHandleA("kernel32.dll");
+  HOOKHANDLE fileHook = InstallHook(k32Mod, "CreateFileA", THCreateFileA_1);
+  if (fileHook == INVALID_HOOK) {
+    k32Mod   = GetModuleHandleA("kernelbase.dll");
+    fileHook = InstallHook(k32Mod, "CreateFileA", THCreateFileA_1);
+  }
+
+  DWORD handlesBefore = 0;
+  GetProcessHandleCount(GetCurrentProcess(), &handlesBefore);
+  for (int i = 0; i < NUM_THREADS; ++i) {
+    std::thread([] {
+      CreateFileA(INVALID_FILENAME.c_str(), GENERIC_READ, 0, nullptr, OPEN_ALWAYS,
+                  FILE_ATTRIBUTE_NORMAL, nullptr);
+      // as usvfs does on DLL_THREAD_DETACH
+      TrampolinePool::releaseThreadState();
+    }).join();
+  }
+  DWORD handlesAfter = 0;
+  GetProcessHandleCount(GetCurrentProcess(), &handlesAfter);
+
+  RemoveHook(fileHook);
+  RemoveHook(closeHook);
+  EXPECT_LT(handlesAfter, handlesBefore + NUM_THREADS / 2);
+}
+
+TEST_F(HookingTest, ReleasedThreadCallsOriginalFunction)
+{
+  // once a thread released its barrier state, its hooks run the original function
+  // rather than make the state again
+  HMODULE k32Mod  = GetModuleHandleA("kernel32.dll");
+  HOOKHANDLE hook = InstallHook(k32Mod, "CreateFileA", THCreateFileA_1);
+  if (hook == INVALID_HOOK) {
+    k32Mod = GetModuleHandleA("kernelbase.dll");
+    hook   = InstallHook(k32Mod, "CreateFileA", THCreateFileA_1);
+  }
+
+  HANDLE beforeRelease = INVALID_HANDLE_VALUE;
+  HANDLE afterRelease  = MARKERHANDLE;
+  std::thread([&] {
+    beforeRelease = CreateFileA(INVALID_FILENAME.c_str(), GENERIC_READ, 0, nullptr,
+                                OPEN_ALWAYS, FILE_ATTRIBUTE_NORMAL, nullptr);
+    TrampolinePool::releaseThreadState();
+    afterRelease = CreateFileA(INVALID_FILENAME.c_str(), GENERIC_READ, 0, nullptr,
+                               OPEN_ALWAYS, FILE_ATTRIBUTE_NORMAL, nullptr);
+  }).join();
+
+  RemoveHook(hook);
+  EXPECT_EQ(MARKERHANDLE, beforeRelease);
+  EXPECT_EQ(INVALID_HANDLE_VALUE, afterRelease);
+}
+
 int main(int argc, char** argv)
 {
   auto logger = spdlog::stdout_logger_mt("usvfs");

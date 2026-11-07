@@ -958,6 +958,7 @@ BOOL APIENTRY DllMain(HMODULE module, DWORD reasonForCall, LPVOID)
   case DLL_THREAD_ATTACH: {
   } break;
   case DLL_THREAD_DETACH: {
+    HookLib::TrampolinePool::releaseThreadState();
   } break;
   }
 
