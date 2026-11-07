@@ -829,6 +829,13 @@ NTSTATUS WINAPI usvfs::hook_NtQueryDirectoryFileEx(
   return res;
 }
 
+bool isWine()
+{
+  static const bool result =
+      GetProcAddress(GetModuleHandleW(L"ntdll.dll"), "wine_get_version") != nullptr;
+  return result;
+}
+
 DLLEXPORT NTSTATUS WINAPI usvfs::hook_NtQueryObject(
     HANDLE Handle, OBJECT_INFORMATION_CLASS ObjectInformationClass,
     PVOID ObjectInformation, ULONG ObjectInformationLength, PULONG ReturnLength)
@@ -863,20 +870,24 @@ DLLEXPORT NTSTATUS WINAPI usvfs::hook_NtQueryObject(
         reinterpret_cast<OBJECT_NAME_INFORMATION*>(ObjectInformation);
 
     if (redir.redirected) {
-      // https://learn.microsoft.com/en-us/windows/win32/fileio/displaying-volume-paths
-      //
-
-      // TODO: is that always true?
-      // path should start with \??\X: - we need to replace this by device name
-      //
-      WCHAR deviceName[MAX_PATH];
+      // Wine names files \??\X:\..., as the tracked path already is, and its
+      // GetFinalPathNameByHandleW rejects \Device\ names with ERROR_GEN_FAILURE
       std::wstring buffer(static_cast<LPCWSTR>(trackerInfo));
-      buffer[6] = L'\0';
+      if (!isWine()) {
+        // https://learn.microsoft.com/en-us/windows/win32/fileio/displaying-volume-paths
+        //
 
-      QueryDosDeviceW(buffer.data() + 4, deviceName, ARRAYSIZE(deviceName));
+        // TODO: is that always true?
+        // path should start with \??\X: - we need to replace this by device name
+        //
+        WCHAR deviceName[MAX_PATH];
+        buffer[6] = L'\0';
 
-      buffer = std::wstring(deviceName) + L'\\' +
-               std::wstring(buffer.data() + 7, buffer.size() - 7);
+        QueryDosDeviceW(buffer.data() + 4, deviceName, ARRAYSIZE(deviceName));
+
+        buffer = std::wstring(deviceName) + L'\\' +
+                 std::wstring(buffer.data() + 7, buffer.size() - 7);
+      }
 
       // the name is put in the buffer AFTER the struct, so the required size if
       // sizeof(OBJECT_NAME_INFORMATION) + the number of bytes for the name + 2 bytes
