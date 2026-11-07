@@ -43,8 +43,9 @@ along with usvfs. If not, see <http://www.gnu.org/licenses/>.
 #include <unicodestring.h>
 #include <usvfs.h>
 
-#include <gmock/gmock-matchers.h>
 #include <gtest/gtest.h>
+
+#include "tvfs_test.h"
 
 namespace spd = spdlog;
 
@@ -54,10 +55,6 @@ namespace ush = usvfs::shared;
 // directory must exist
 static LPCSTR VIRTUAL_FILEA  = "C:/np.exe";
 static LPCWSTR VIRTUAL_FILEW = L"C:/np.exe";
-
-// a real file on disc that has to exist
-static LPCSTR REAL_FILEA  = "C:/windows/notepad.exe";
-static LPCWSTR REAL_FILEW = L"C:/windows/notepad.exe";
 
 static LPCSTR REAL_DIRA  = "C:/windows/Logs";
 static LPCWSTR REAL_DIRW = L"C:/windows/Logs";
@@ -70,42 +67,6 @@ static std::shared_ptr<spdlog::logger> logger()
   }
   return result;
 }
-
-auto defaultUsvfsParams(const char* instanceName = "usvfs_test")
-{
-  std::unique_ptr<usvfsParameters, decltype(&usvfsFreeParameters)> parameters{
-      usvfsCreateParameters(), &usvfsFreeParameters};
-
-  usvfsSetInstanceName(parameters.get(), instanceName);
-  usvfsSetDebugMode(parameters.get(), true);
-  usvfsSetLogLevel(parameters.get(), LogLevel::Debug);
-  usvfsSetCrashDumpType(parameters.get(), CrashDumpsType::None);
-  usvfsSetCrashDumpPath(parameters.get(), "");
-
-  return std::move(parameters);
-}
-
-class USVFSTest : public testing::Test
-{
-public:
-  void SetUp()
-  {
-    SHMLogger::create("usvfs");
-    // need to initialize logging in the context of the dll
-    usvfsInitLogging();
-  }
-
-  void TearDown()
-  {
-    std::array<char, 1024> buffer;
-    while (SHMLogger::instance().tryGet(buffer.data(), buffer.size())) {
-      std::cout << buffer.data() << std::endl;
-    }
-    SHMLogger::free();
-  }
-
-private:
-};
 
 class USVFSTestWithReroute : public testing::Test
 {
@@ -270,146 +231,6 @@ ctx(CreateHookContext(params, ::GetModuleHandle(nullptr)));
   ASSERT_NE(0UL, res);
   ASSERT_EQ(expected, std::wstring(buffer.get()));
 }*/
-
-// small wrapper to call usvfs::hook_NtOpenFile with a path
-//
-// at some point in time, changes were made to USVFS such that calling a hooked
-// function from a handle obtained from a non-hooked function would not work anymore,
-// meaning that function such as CreateFileW that have no hook equivalent cannot
-// be used to test hook functions
-//
-// this function is useful to simulate a CreateFileW by internally using the hook
-// version of NtOpenFile
-//
-HANDLE hooked_NtOpenFile(LPCWSTR path, ACCESS_MASK accessMask, ULONG shareAccess,
-                         ULONG openOptions)
-{
-  constexpr size_t BUFFER_SIZE = 2048;
-  IO_STATUS_BLOCK statusBlock;
-  OBJECT_ATTRIBUTES attributes;
-  attributes.SecurityDescriptor       = 0;
-  attributes.SecurityQualityOfService = 0;
-  attributes.RootDirectory            = 0;
-  attributes.Attributes               = 0;
-  attributes.Length                   = sizeof(OBJECT_ATTRIBUTES);
-
-  WCHAR stringBuffer[BUFFER_SIZE];
-  UNICODE_STRING string;
-  string.Buffer = stringBuffer;
-  lstrcpyW(stringBuffer, L"\\??\\");
-  lstrcatW(stringBuffer, path);
-  string.Length         = static_cast<USHORT>(lstrlenW(stringBuffer) * 2);
-  string.MaximumLength  = BUFFER_SIZE;
-  attributes.ObjectName = &string;
-
-  HANDLE ret = INVALID_HANDLE_VALUE;
-  if (usvfs::hook_NtOpenFile(&ret, accessMask, &attributes, &statusBlock, shareAccess,
-                             openOptions) != STATUS_SUCCESS) {
-    return INVALID_HANDLE_VALUE;
-  }
-
-  return ret;
-}
-
-TEST_F(USVFSTest, NtQueryDirectoryFileRegularFile)
-{
-  auto params = defaultUsvfsParams();
-  std::unique_ptr<usvfs::HookContext> ctx(
-      usvfsCreateHookContext(*params, ::GetModuleHandle(nullptr)));
-
-  HANDLE hdl =
-      hooked_NtOpenFile(L"C:\\", FILE_GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE,
-                        FILE_DIRECTORY_FILE | FILE_SYNCHRONOUS_IO_NONALERT);
-  ASSERT_NE(INVALID_HANDLE_VALUE, hdl);
-
-  IO_STATUS_BLOCK status;
-  char buffer[1024];
-
-  usvfs::hook_NtQueryDirectoryFile(hdl, nullptr, nullptr, nullptr, &status, buffer,
-                                   1024, FileDirectoryInformation, TRUE, nullptr, TRUE);
-
-  ASSERT_EQ(STATUS_SUCCESS, status.Status);
-
-  usvfs::hook_NtClose(hdl);
-}
-
-TEST_F(USVFSTest, NtQueryDirectoryFileFindsVirtualFile)
-{
-  auto params = defaultUsvfsParams();
-  std::unique_ptr<usvfs::HookContext> ctx(
-      usvfsCreateHookContext(*params, ::GetModuleHandle(nullptr)));
-  usvfs::RedirectionTreeContainer& tree = ctx->redirectionTable();
-
-  tree.addFile(L"C:\\np.exe", usvfs::RedirectionDataLocal(REAL_FILEA));
-
-  HANDLE hdl =
-      hooked_NtOpenFile(L"C:\\", FILE_GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE,
-                        FILE_DIRECTORY_FILE | FILE_SYNCHRONOUS_IO_NONALERT);
-  ASSERT_NE(INVALID_HANDLE_VALUE, hdl);
-
-  IO_STATUS_BLOCK status;
-  char buffer[1024];
-
-  usvfs::UnicodeString fileName(L"np.exe");
-
-  usvfs::hook_NtQueryDirectoryFile(hdl, nullptr, nullptr, nullptr, &status, buffer,
-                                   1024, FileDirectoryInformation, TRUE,
-                                   static_cast<PUNICODE_STRING>(fileName), TRUE);
-
-  FILE_DIRECTORY_INFORMATION* info =
-      reinterpret_cast<FILE_DIRECTORY_INFORMATION*>(buffer);
-  ASSERT_EQ(STATUS_SUCCESS, status.Status);
-  ASSERT_EQ(0, wcscmp(info->FileName, L"np.exe"));
-
-  usvfs::hook_NtClose(hdl);
-}
-
-TEST_F(USVFSTest, NtQueryDirectoryFileExVirtualFile)
-{
-  auto params = defaultUsvfsParams();
-  std::unique_ptr<usvfs::HookContext> ctx(
-      usvfsCreateHookContext(*params, ::GetModuleHandle(nullptr)));
-  usvfs::RedirectionTreeContainer& tree = ctx->redirectionTable();
-
-  tree.addFile(L"C:\\0123456789.txt", usvfs::RedirectionDataLocal(REAL_FILEA));
-  tree.addFile(L"C:\\123456", usvfs::RedirectionDataLocal(REAL_FILEA));
-  tree.addFile(L"C:\\abcdef", usvfs::RedirectionDataLocal(REAL_FILEA));
-  tree.addFile(L"C:\\abcdefghijklmnopqrstuvwxyz.txt",
-               usvfs::RedirectionDataLocal(REAL_FILEA));
-
-  HANDLE hdl =
-      hooked_NtOpenFile(L"C:\\", FILE_GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE,
-                        FILE_DIRECTORY_FILE | FILE_SYNCHRONOUS_IO_NONALERT);
-  ASSERT_NE(INVALID_HANDLE_VALUE, hdl);
-
-  IO_STATUS_BLOCK status;
-
-  constexpr size_t BUFFER_SIZE = 2048;
-  char buffer[BUFFER_SIZE];
-
-  std::vector<std::wstring> foundFiles;
-  while (usvfs::hook_NtQueryDirectoryFileEx(
-             hdl, nullptr, nullptr, nullptr, &status, buffer, BUFFER_SIZE,
-             FileFullDirectoryInformation, 0, nullptr) == STATUS_SUCCESS) {
-    std::size_t offset = 0;
-    while (offset < BUFFER_SIZE) {
-      const auto* info = reinterpret_cast<FILE_FULL_DIR_INFORMATION*>(buffer + offset);
-      foundFiles.emplace_back(info->FileName, info->FileNameLength / sizeof(wchar_t));
-
-      if (info->NextEntryOffset == 0) {
-        break;  // no more entries
-      }
-
-      offset += info->NextEntryOffset;
-    }
-  }
-
-  ASSERT_THAT(foundFiles,
-              ::testing::IsSupersetOf({L"0123456789.txt", L"123456", L"abcdef",
-                                       L"abcdefghijklmnopqrstuvwxyz.txt"}));
-
-  usvfs::hook_NtClose(hdl);
-}
 
 TEST_F(USVFSTest, NtQueryObjectVirtualFile)
 {

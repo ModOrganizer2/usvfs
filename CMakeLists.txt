@@ -68,6 +68,8 @@ install(FILES
   DESTINATION lib/cmake/usvfs
 )
 
+option(USVFS_BUILD_BENCHMARKS "Build USVFS benchmarks along with the tests." OFF)
+
 if (BUILD_TESTING)
     enable_testing()
     set(USVFS_TEST_BINDIR ${CMAKE_CURRENT_LIST_DIR}/test/bin)

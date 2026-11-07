@@ -148,9 +148,9 @@ struct std::formatter<usvfs::log::Wrap<NTSTATUS>, char> : std::formatter<NTSTATU
     switch (v.m_Data) {
     case 0x00000000:
       return std::format_to(ctx.out(), "ok");
-    case 0xC0000022:
+    case static_cast<NTSTATUS>(0xC0000022):
       return std::format_to(ctx.out(), "access denied");
-    case 0xC0000035:
+    case static_cast<NTSTATUS>(0xC0000035):
       return std::format_to(ctx.out(), "exists already");
     }
     return std::format_to(ctx.out(), "err {:x}", v.m_Data);

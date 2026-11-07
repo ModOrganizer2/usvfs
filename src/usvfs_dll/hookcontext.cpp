@@ -36,6 +36,7 @@ using namespace usvfs;
 namespace ush = usvfs::shared;
 
 HookContext* HookContext::s_Instance = nullptr;
+std::atomic<std::uint64_t> HookContext::s_Generation{0};
 
 void printBuffer(const char* buffer, size_t size)
 {
@@ -77,6 +78,7 @@ HookContext::HookContext(const usvfsParameters& params, HMODULE module)
                               m_Parameters->currentSHMName(), userCount);
 
   s_Instance = this;
+  ++s_Generation;
 
   if (m_Tree.get() == nullptr) {
     USVFS_THROW_EXCEPTION(usage_error()
@@ -143,6 +145,11 @@ HookContext::Ptr HookContext::writeAccess(const char*)
 
   s_Instance->m_Mutex.wait(200);
   return Ptr(s_Instance, unlock);
+}
+
+std::uint64_t HookContext::generation()
+{
+  return s_Generation.load();
 }
 
 void HookContext::setDebugParameters(LogLevel level, CrashDumpsType dumpType,

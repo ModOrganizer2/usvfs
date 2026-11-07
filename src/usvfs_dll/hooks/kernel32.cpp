@@ -1,5 +1,4 @@
 #include "kernel32.h"
-#include "sharedids.h"
 
 #include "../hookcallcontext.h"
 #include "../hookcontext.h"
@@ -1507,11 +1506,6 @@ HANDLE WINAPI usvfs::hook_FindFirstFileExW(
                                        fSearchOp, lpSearchFilter, dwAdditionalFlags);
       POST_REALCALL
     }
-  }
-
-  if (res != INVALID_HANDLE_VALUE) {
-    // store the original search path for use during iteration
-    WRITE_CONTEXT()->customData<SearchHandleMap>(SearchHandles)[res] = lpFileName;
   }
 
   LOG_CALL()

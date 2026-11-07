@@ -14,7 +14,7 @@ target_link_libraries(shared
 target_include_directories(shared
     PUBLIC ${PROJECT_SOURCE_DIR}/include/usvfs ${CMAKE_CURRENT_SOURCE_DIR})
 target_precompile_headers(shared PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/pch.h)
-target_compile_options(shared PUBLIC /FI"pch.h")
+target_compile_options(shared PUBLIC /FIpch.h)
 target_compile_definitions(shared PUBLIC
     SPDLOG_USE_STD_FORMAT SPDLOG_NO_NAME SPDLOG_NO_REGISTRY_MUTEX
     BOOST_INTERPROCESS_SHARED_DIR_FUNC BOOST_CONFIG_SUPPRESS_OUTDATED_MESSAGE

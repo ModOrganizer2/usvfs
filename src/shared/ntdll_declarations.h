@@ -358,13 +358,18 @@ typedef struct _FILE_REPARSE_POINT_INFORMATION
 #define STATUS_NO_MORE_FILES ((NTSTATUS)0x80000006L)
 #define STATUS_INFO_LENGTH_MISMATCH ((NTSTATUS)0xC0000004L)
 #define STATUS_NO_SUCH_FILE ((NTSTATUS)0xC000000FL)
+#define STATUS_OBJECT_NAME_NOT_FOUND ((NTSTATUS)0xC0000034L)
+#define STATUS_OBJECT_PATH_NOT_FOUND ((NTSTATUS)0xC000003AL)
+#define STATUS_DELETE_PENDING ((NTSTATUS)0xC0000056L)
+#define STATUS_NOT_A_DIRECTORY ((NTSTATUS)0xC0000103L)
 
 #define SL_RESTART_SCAN 0x01
 #define SL_RETURN_SINGLE_ENTRY 0x02
 #define SL_INDEX_SPECIFIED 0x04
 #define SL_RETURN_ON_DISK_ENTRIES_ONLY 0x08
+#define SL_NO_CURSOR_UPDATE 0x10
 
-#define SL_QUERY_DIRECTORY_MASK 0x0b
+#define SL_QUERY_DIRECTORY_MASK 0x1b
 
 typedef enum _FILE_INFORMATION_CLASS
 {
@@ -375,6 +380,7 @@ typedef enum _FILE_INFORMATION_CLASS
   FileNameInformation                   = 9,
   FileRenameInformation                 = 10,
   FileNamesInformation                  = 12,
+  FileModeInformation                   = 16,
   FileAllInformation                    = 18,
   FileObjectIdInformation               = 29,
   FileReparsePointInformation           = 33,
@@ -498,6 +504,15 @@ typedef enum _OBJECT_INFORMATION_CLASS
   ObjectTypeInformation  = 2
 } OBJECT_INFORMATION_CLASS;
 
+typedef struct _PUBLIC_OBJECT_BASIC_INFORMATION
+{
+  ULONG Attributes;
+  ACCESS_MASK GrantedAccess;
+  ULONG HandleCount;
+  ULONG PointerCount;
+  ULONG Reserved[10];
+} PUBLIC_OBJECT_BASIC_INFORMATION, *PPUBLIC_OBJECT_BASIC_INFORMATION;
+
 typedef struct _RTL_RELATIVE_NAME
 {
   UNICODE_STRING RelativeName;
@@ -515,6 +530,8 @@ typedef struct _FILE_NETWORK_OPEN_INFORMATION
   LARGE_INTEGER EndOfFile;
   ULONG FileAttributes;
 } FILE_NETWORK_OPEN_INFORMATION, *PFILE_NETWORK_OPEN_INFORMATION;
+
+#define OBJ_CASE_INSENSITIVE 0x00000040L
 
 #define FILE_DIRECTORY_FILE 0x00000001
 #define FILE_WRITE_THROUGH 0x00000002
@@ -587,6 +604,14 @@ using RtlDosPathNameToRelativeNtPathName_U_WithStatus_type =
                      PRTL_RELATIVE_NAME RelativeName);
 using RtlReleaseRelativeName_type = void(NTAPI*)(PRTL_RELATIVE_NAME RelativeName);
 using RtlGetVersion_type          = NTSTATUS(NTAPI*)(PRTL_OSVERSIONINFOW);
+using RtlIsNameInExpression_type  = BOOLEAN(NTAPI*)(PUNICODE_STRING Expression,
+                                                    PUNICODE_STRING Name,
+                                                    BOOLEAN IgnoreCase,
+                                                    PWCH UpcaseTable);
+using RtlUpcaseUnicodeString_type = NTSTATUS(NTAPI*)(PUNICODE_STRING DestinationString,
+                                                     PCUNICODE_STRING SourceString,
+                                                     BOOLEAN AllocateDestinationString);
+using RtlUpcaseUnicodeChar_type   = WCHAR(NTAPI*)(WCHAR SourceCharacter);
 
 extern NtQueryDirectoryFile_type NtQueryDirectoryFile;
 extern NtQueryDirectoryFileEx_type NtQueryDirectoryFileEx;
@@ -604,6 +629,9 @@ extern RtlDosPathNameToRelativeNtPathName_U_WithStatus_type
     RtlDosPathNameToRelativeNtPathName_U_WithStatus;
 extern RtlReleaseRelativeName_type RtlReleaseRelativeName;
 extern RtlGetVersion_type RtlGetVersion;
+extern RtlIsNameInExpression_type RtlIsNameInExpression;
+extern RtlUpcaseUnicodeString_type RtlUpcaseUnicodeString;
+extern RtlUpcaseUnicodeChar_type RtlUpcaseUnicodeChar;
 
 // ensures ntdll functions have been initialized (only needed during static objects
 // initialization)

@@ -5,6 +5,10 @@
         "BUILD_TESTING": {
           "type": "BOOL",
           "value": "ON"
+        },
+        "USVFS_BUILD_BENCHMARKS": {
+          "type": "BOOL",
+          "value": "ON"
         }
       },
       "errors": {
@@ -32,7 +36,7 @@
       "cacheVariables": {
         "VCPKG_MANIFEST_FEATURES": {
           "type": "STRING",
-          "value": "testing"
+          "value": "testing;benchmark"
         }
       },
       "hidden": true,

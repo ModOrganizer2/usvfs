@@ -189,6 +189,33 @@ TEST(RedFileSystemTest, RedFileSystemTest)
   write_content(hudpainter_path / "TEST.json", "{}");
 }
 
+// data/first.txt is mapped from virtual/first.txt, which is only virtual - the hooks
+// redirect a path once only, so data/first.txt does not open, and is not listed
+// either, though chained/first.txt is what virtual/first.txt is mapped from in turn
+//
+TEST(ChainedMappingTest, ChainedMappingTest)
+{
+  const auto data = parameters.data();
+
+  HandleGuard file = CreateFileW((data / "first.txt").c_str(), GENERIC_READ,
+                                 FILE_SHARE_READ, nullptr, OPEN_EXISTING, 0, nullptr);
+  EXPECT_EQ(INVALID_HANDLE_VALUE, (HANDLE)file);
+  EXPECT_EQ(ERROR_PATH_NOT_FOUND, GetLastError());
+
+  std::vector<std::wstring> names;
+  WIN32_FIND_DATAW found;
+  const HANDLE find = FindFirstFileW((data / "*").c_str(), &found);
+  ASSERT_NE(INVALID_HANDLE_VALUE, find);
+  do {
+    const std::wstring name = found.cFileName;
+    if (name != L"." && name != L"..") {
+      names.push_back(name);
+    }
+  } while (FindNextFileW(find, &found));
+  FindClose(find);
+  EXPECT_THAT(names, ::testing::ElementsAre(L".gitkeep"));
+}
+
 TEST(SkipFilesTest, SkipFilesTest)
 {
   const auto data = parameters.data();

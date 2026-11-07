@@ -30,6 +30,9 @@ along with usvfs. If not, see <http://www.gnu.org/licenses/>.
 #include <usvfsparametersprivate.h>
 #include <winapi.h>
 
+#include <atomic>
+#include <cstdint>
+
 namespace usvfs
 {
 
@@ -71,6 +74,13 @@ public:
    * this leaves scope
    */
   static Ptr writeAccess(const char* source);
+
+  /**
+   * @return a number that changes whenever a context is created, so that state the
+   * hooks keep outside the context can tell whether the current context built it.
+   * Read without the lock.
+   */
+  static std::uint64_t generation();
 
   /**
    * @return table containing file redirection information
@@ -155,6 +165,7 @@ private:
 
 private:
   static HookContext* s_Instance;
+  static std::atomic<std::uint64_t> s_Generation;
 
   shared::SharedMemoryT m_ConfigurationSHM;
   SharedParameters* m_Parameters{nullptr};

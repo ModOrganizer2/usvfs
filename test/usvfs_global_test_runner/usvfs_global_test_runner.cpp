@@ -25,6 +25,15 @@ TEST_F(UsvfsGlobalTest, RedFileSystemTest)
   ASSERT_DIRECTORY_EQ(ExpectedFolder(), ActualFolder());
 }
 
+// data/first.txt is mapped from virtual/first.txt, which is only virtual: the folder
+// virtual is mapped from chained, and does not exist
+TEST_F(UsvfsGlobalTest, ChainedMappingTest)
+{
+  LinkDirectoryAfterMods("chained", "virtual");
+  LinkFileAfterMods("virtual/first.txt", "data/first.txt");
+  ASSERT_EQ(0, Run());
+}
+
 TEST_F(UsvfsGlobalTest, SkipFilesTest)
 {
   SetUpOverwrite(true);

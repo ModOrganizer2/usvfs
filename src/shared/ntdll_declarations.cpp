@@ -19,6 +19,7 @@ You should have received a copy of the GNU General Public License
 along with usvfs. If not, see <http://www.gnu.org/licenses/>.
 */
 #include "ntdll_declarations.h"
+#include "name_expression.h"
 #include <cassert>
 
 #define LOAD_EXT(mod, name)                                                            \
@@ -40,6 +41,9 @@ RtlDosPathNameToRelativeNtPathName_U_WithStatus_type
     RtlDosPathNameToRelativeNtPathName_U_WithStatus;
 RtlReleaseRelativeName_type RtlReleaseRelativeName;
 RtlGetVersion_type RtlGetVersion;
+RtlIsNameInExpression_type RtlIsNameInExpression;
+RtlUpcaseUnicodeString_type RtlUpcaseUnicodeString;
+RtlUpcaseUnicodeChar_type RtlUpcaseUnicodeChar;
 NtTerminateProcess_type NtTerminateProcess;
 
 static bool ntdll_initialized;
@@ -63,6 +67,14 @@ void ntdll_declarations_init()
     LOAD_EXT(ntDLLMod, RtlDosPathNameToRelativeNtPathName_U_WithStatus);
     LOAD_EXT(ntDLLMod, RtlReleaseRelativeName);
     LOAD_EXT(ntDLLMod, RtlGetVersion);
+    // Wine's ntdll does not export it
+    RtlIsNameInExpression = reinterpret_cast<RtlIsNameInExpression_type>(
+        ::GetProcAddress(ntDLLMod, "RtlIsNameInExpression"));
+    if (RtlIsNameInExpression == nullptr) {
+      RtlIsNameInExpression = usvfs::shared::isNameInExpression;
+    }
+    LOAD_EXT(ntDLLMod, RtlUpcaseUnicodeString);
+    LOAD_EXT(ntDLLMod, RtlUpcaseUnicodeChar);
     LOAD_EXT(ntDLLMod, NtTerminateProcess);
 
     ntdll_initialized = true;

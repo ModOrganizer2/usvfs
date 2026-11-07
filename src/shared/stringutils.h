@@ -33,9 +33,6 @@ fs::path make_relative(const fs::path& from, const fs::path& to);
 
 std::string to_hex(void* bufferIn, size_t bufferSize);
 
-// convert unicode string to upper-case (locale invariant)
-std::wstring to_upper(const std::wstring& input);
-
 // formats a number with thousand separators and B at the end
 //
 std::string byte_string(std::size_t n);

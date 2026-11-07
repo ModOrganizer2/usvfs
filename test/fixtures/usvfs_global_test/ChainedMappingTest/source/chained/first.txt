@@ -1,0 +1,1 @@
+first.txt in chained, longer than the one in mods/mod1/sub

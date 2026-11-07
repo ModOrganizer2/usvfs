@@ -56,9 +56,18 @@ foreach(directory ${directories})
         continue()
     endif()
 
+    get_filename_component(dirname ${directory} NAME)
+
+    # a benchmark measures rather than checks, and takes its time
+    if(dirname STREQUAL "tvfs_directory_bench")
+        if(USVFS_BUILD_BENCHMARKS)
+            add_subdirectory(${directory})
+        endif()
+        continue()
+    endif()
+
     add_subdirectory(${directory})
 
-    get_filename_component(dirname ${directory} NAME)
     if((dirname STREQUAL "test_utils") OR (dirname STREQUAL "gtest_utils"))
         continue()
     endif()

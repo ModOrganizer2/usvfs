@@ -177,8 +177,31 @@ void UsvfsGlobalTest::PrepareMapping() const
     }
   }
 
+  for (const auto& link : m_links_after_mods) {
+    const auto source      = m_temporary_folder / link.source;
+    const auto destination = m_temporary_folder / link.destination;
+    if (link.is_directory) {
+      usvfsVirtualLinkDirectoryStatic(source.c_str(), destination.c_str(),
+                                      LINKFLAG_RECURSIVE);
+    } else {
+      usvfsVirtualLinkFile(source.c_str(), destination.c_str(), 0);
+    }
+  }
+
   // by default, only create overwrite if present
   SetUpOverwrite(false);
+}
+
+void UsvfsGlobalTest::LinkDirectoryAfterMods(std::filesystem::path source,
+                                             std::filesystem::path destination)
+{
+  m_links_after_mods.push_back({std::move(source), std::move(destination), true});
+}
+
+void UsvfsGlobalTest::LinkFileAfterMods(std::filesystem::path source,
+                                        std::filesystem::path destination)
+{
+  m_links_after_mods.push_back({std::move(source), std::move(destination), false});
 }
 
 int UsvfsGlobalTest::Run() const

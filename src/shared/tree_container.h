@@ -110,7 +110,7 @@ public:
   template <typename... Arguments>
   typename TreeT::DataT create(Arguments&&... args)
   {
-    return TreeT::DataT(std::forward<Arguments>(args)..., allocator());
+    return typename TreeT::DataT(std::forward<Arguments>(args)..., allocator());
   }
 
   TreeT* operator->() { return get(); }
@@ -213,7 +213,8 @@ private:
   {
     TreeMeta(const typename TreeT::DataT& data, SegmentManagerT* segmentManager)
         : tree(segmentManager->construct<TreeT>(bi::anonymous_instance)(
-              "", true, TreeT::NodePtrT(), data, VoidAllocatorT(segmentManager))),
+              "", true, typename TreeT::NodePtrT(), data,
+              VoidAllocatorT(segmentManager))),
           referenceCount(0),  // reference count only set on top level node
           outdated(false)
     {}
@@ -240,14 +241,15 @@ private:
     auto* manager = allocator.get_segment_manager();
 
     return manager->construct<TreeT>(bi::anonymous_instance)(
-        name, flags, TreeT::NodePtrT(),
+        name, flags, typename TreeT::NodePtrT(),
         createData<typename TreeT::DataT, T>(data, allocator), manager);
   }
 
   typename TreeT::NodePtrT createSubPtr(TreeT* subNode)
   {
     SharedMemoryT::segment_manager* manager = m_SHM->get_segment_manager();
-    return TreeT::NodePtrT(subNode, allocator(), TreeT::DeleterT(manager));
+    return typename TreeT::NodePtrT(subNode, allocator(),
+                                    typename TreeT::DeleterT(manager));
   }
 
   template <typename T>
@@ -262,7 +264,7 @@ private:
         // last name component, should be the filename
         TreeT* node       = createSubNode(allocator, path.current(), flags, data);
         newNode           = createSubPtr(node);
-        newNode->m_Self   = TreeT::WeakPtrT(newNode);
+        newNode->m_Self   = typename TreeT::WeakPtrT(newNode);
         newNode->m_Parent = base->m_Self;
         base->set(StringT(path.current(), allocator), newNode);
         return newNode;
@@ -284,7 +286,7 @@ private:
 
         subNode =
             base->m_Nodes.emplace(StringT(path.current(), allocator), newNode).first;
-        subNode->second->m_Self   = TreeT::WeakPtrT(subNode->second);
+        subNode->second->m_Self   = typename TreeT::WeakPtrT(subNode->second);
         subNode->second->m_Parent = base->m_Self;
       }
 

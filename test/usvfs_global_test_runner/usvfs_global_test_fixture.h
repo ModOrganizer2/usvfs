@@ -2,6 +2,7 @@
 
 #include <filesystem>
 #include <memory>
+#include <vector>
 
 #include <gtest/gtest.h>
 
@@ -29,6 +30,15 @@ public:
   // but need to contain files after the run
   //
   void SetUpOverwrite(bool force = true) const;
+
+  // link a folder or a file into another path once the mods are linked, so that a test
+  // can map from paths that are only virtual - both paths are relative to the
+  // temporary folder
+  //
+  void LinkDirectoryAfterMods(std::filesystem::path source,
+                              std::filesystem::path destination);
+  void LinkFileAfterMods(std::filesystem::path source,
+                         std::filesystem::path destination);
 
   // run the test, return the exit code of the google test process
   //
@@ -79,4 +89,14 @@ private:
   std::filesystem::path m_data_folder      = m_temporary_folder / "data";
   std::filesystem::path m_mods_folder      = m_temporary_folder / "mods";
   std::filesystem::path m_overwrite_folder = m_temporary_folder / "overwrite";
+
+  struct Link
+  {
+    std::filesystem::path source;
+    std::filesystem::path destination;
+    bool is_directory;
+  };
+
+  // links made by PrepareMapping after the mods, in order
+  std::vector<Link> m_links_after_mods;
 };

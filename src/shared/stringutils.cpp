@@ -120,16 +120,6 @@ std::string to_hex(void* bufferIn, size_t bufferSize)
   return temp.str();
 }
 
-std::wstring to_upper(const std::wstring& input)
-{
-  std::wstring result;
-  result.resize(input.size());
-  ::LCMapStringW(LOCALE_INVARIANT, LCMAP_UPPERCASE, input.c_str(),
-                 static_cast<int>(input.size()), &result[0],
-                 static_cast<int>(result.size()));
-  return result;
-}
-
 std::string byte_string(std::size_t n)
 {
   auto s = std::to_string(n);
